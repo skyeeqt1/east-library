@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+/*
+ * ESCR Library — Design tokens (design.md §2)
+ *
+ * Tailwind CSS v4 exposes theme extensions through the `@theme` block instead of a
+ * `tailwind.config.ts` file (v4 is CSS-first). Every token below maps 1:1 to the
+ * values in design.md so utilities like `bg-primary-500`, `text-gray-500`,
+ * `rounded-lg`, `shadow-xs`, `duration-fast` work out of the box.
+ * Never hardcode spacing / radius / shadow values outside this block.
+ */
+@theme {
+  /* ---------------------------------------------------------------
+   * Brand / Primary (Untitled UI Violet) — design.md §2.1
+   * ------------------------------------------------------------- */
+  --color-primary-25: #f9f5ff;
+  --color-primary-50: #f4ebff;
+  --color-primary-100: #e9d7fe;
+  --color-primary-300: #b692f6;
+  --color-primary-500: #7f56d9; /* buttons, active nav, chart lines */
+  --color-primary-600: #6941c6; /* hover */
+  --color-primary-700: #53389e; /* active */
+
+  /* ---------------------------------------------------------------
+   * Neutrals — design.md §2.1
+   * ------------------------------------------------------------- */
+  --color-gray-25: #fcfcfd; /* row hover */
+  --color-gray-50: #f9fafb; /* table header, sidebar hover */
+  --color-gray-100: #f2f4f7; /* chips, active nav pill */
+  --color-gray-200: #e4e7ec; /* borders */
+  --color-gray-300: #d0d5dd; /* input borders */
+  --color-gray-500: #667085; /* secondary text (AA on white ✓) */
+  --color-gray-700: #344054;
+  --color-gray-900: #101828; /* headings */
+
+  /* ---------------------------------------------------------------
+   * Semantic — design.md §2.1
+   * ------------------------------------------------------------- */
+  --color-success-25: #f6fef9;
+  --color-success-500: #12b76a;
+  --color-success-700: #027a48;
+
+  --color-warning-25: #fffceb;
+  --color-warning-500: #f79009;
+  --color-warning-700: #b54708;
+
+  --color-error-25: #fffbfa;
+  --color-error-500: #f04438;
+  --color-error-700: #b42318;
+
+  --color-info-25: #f5f8ff;
+  --color-info-500: #2e90fa;
+  /* Addition (see report): token set has no info-700, but badge text must pass
+   * 4.5:1 on info-25. Untitled UI blue-700 keeps the same hue family. */
+  --color-info-700: #175cd3;
+
+  /* Modal / drawer backdrop — design.md §4.7 rgba(16,24,40,.55) */
+  --color-backdrop: rgb(16 24 40 / 0.55);
+
+  /* ---------------------------------------------------------------
+   * Typography — design.md §2.2 (Inter is injected by next/font as
+   * --font-inter; weights 400/500/600/700, see app/layout.tsx)
+   * ------------------------------------------------------------- */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace; /* IDs, ISBN, ₱ values */
+
+  --text-xs: 0.75rem; /* 12px — table meta, badges */
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem; /* 14px — body, table cells */
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem; /* 16px — default body */
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem; /* 18px — card titles */
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem; /* 20px — page titles */
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem; /* 24px — stat numbers */
+  --text-2xl--line-height: 2rem;
+  --text-4xl: 2.25rem; /* 36px — hero metric */
+  --text-4xl--line-height: 2.5rem;
+
+  --tracking-tight: -0.02em; /* big numbers only */
+
+  /* ---------------------------------------------------------------
+   * Spacing — design.md §2.3, 4px base.
+   * Tailwind's default spacing scale already is `0.25rem * n`, i.e.
+   * space-1…space-16 = 4·8·12·16·20·24·32·40·48·64px. No override needed.
+   * ------------------------------------------------------------- */
+
+  /* ---------------------------------------------------------------
+   * Radius — design.md §2.4  (sm 6 / default 8 / lg 10 / xl 12)
+   * The bare 8px radius is exposed as `rounded-md` and as `rounded`.
+   * ------------------------------------------------------------- */
+  --radius-sm: 6px; /* badges, inputs (§2.4) / see §4.6 note */
+  --radius: 8px;
+  --radius-md: 8px; /* buttons, inputs, table wrapper */
+  --radius-lg: 10px; /* cards */
+  --radius-xl: 12px; /* modals */
+
+  /* ---------------------------------------------------------------
+   * Elevation — design.md §2.4
+   * ------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05); /* cards, buttons */
+  --shadow-md: 0 4px 8px -2px rgb(16 24 40 / 0.1); /* dropdown */
+  --shadow-lg: 0 12px 16px -4px rgb(16 24 40 / 0.08); /* modal */
+  /* Input focus ring — design.md §4.6 */
+  --shadow-focus: 0 0 0 4px rgb(127 86 217 / 0.12);
+
+  /* ---------------------------------------------------------------
+   * Motion — design.md §2.4 (guarded by prefers-reduced-motion below)
+   * ------------------------------------------------------------- */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --default-transition-duration: 200ms;
+  --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-white);
+    color: var(--color-gray-900);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus is never removed — visible 2px primary outline, 2px offset (design §7) */
+  :focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+
+  /*
+   * Motion guard — design.md §2.4: all motion wrapped in
+   * @media (prefers-reduced-motion: reduce).
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Modal entrance — neutralised above for reduced-motion users. */
+  @keyframes escr-modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .escr-modal-in {
+    animation: escr-modal-in 200ms var(--ease-standard) both;
+  }
+}
