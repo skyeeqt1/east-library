@@ -127,7 +127,10 @@ export function Modal({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cn(
-          "escr-modal-in relative w-full max-w-[480px] rounded-xl bg-white p-6 shadow-lg",
+          // Design §4.7: 480px wide. `max-h` + scroll keeps tall forms (e.g.
+          // the 8-field Add book dialog) reachable on short viewports and at
+          // 200% text zoom (design §7) instead of clipping off-screen.
+          "escr-modal-in relative max-h-[calc(100dvh-2rem)] w-full max-w-[480px] overflow-y-auto rounded-xl bg-white p-6 shadow-lg",
           className,
         )}
       >

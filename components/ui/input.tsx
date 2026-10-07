@@ -37,16 +37,30 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: boolean;
   /** Optional slot rendered inside the field (e.g. show/hide password). */
   trailing?: ReactNode;
+  /**
+   * Leading adornment rendered inside the field (e.g. the `₱` money prefix,
+   * design §4.6). Purely decorative — screen readers skip it (`aria-hidden`).
+   */
+  leading?: ReactNode;
 }
 
 export function Input({
   error = false,
   trailing,
+  leading,
   className,
   ...rest
 }: InputProps) {
   return (
     <div className="relative">
+      {leading ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-sm text-gray-500"
+        >
+          {leading}
+        </span>
+      ) : null}
       <input
         className={cn(
           "block h-10 w-full rounded-md border bg-white px-3.5 text-sm text-gray-900",
@@ -56,6 +70,7 @@ export function Input({
           error
             ? "border-error-500 focus:border-error-500"
             : "border-gray-300 focus:border-primary-500",
+          leading ? "pl-9" : null,
           trailing ? "pr-11" : null,
           className,
         )}
@@ -121,7 +136,7 @@ export function Field({
         />
       </div>
       {error ? (
-        <p id={errorId} className="mt-2 text-xs text-error-500">
+        <p id={errorId} aria-live="polite" className="mt-2 text-xs text-error-500">
           {error}
         </p>
       ) : helper ? (

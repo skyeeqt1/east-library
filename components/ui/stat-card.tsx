@@ -65,9 +65,13 @@ export function StatCard({
         {delta ? <span className="text-xs text-gray-500">{caption}</span> : null}
       </div>
 
-      <div className="mt-5" aria-hidden="true">
-        <Sparkline data={data} />
-      </div>
+      {/* Sparkline area — omitted entirely when the caller has no trend data
+          (e.g. Phase 2 catalog tiles), so the card keeps even padding. */}
+      {data.length >= 2 ? (
+        <div className="mt-5" aria-hidden="true">
+          <Sparkline data={data} />
+        </div>
+      ) : null}
     </article>
   );
 }
