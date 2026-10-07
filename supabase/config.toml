@@ -1,0 +1,16 @@
+# supabase/config.toml — ESCR Library local-dev config (Supabase CLI)
+# Source of truth: schema.md §6 (auth), §8 (checklist)
+project_id = "escr-library"
+
+[auth]
+# R-01: self-registration is FORBIDDEN.
+# Public sign-up MUST remain disabled in the Supabase dashboard
+# (Authentication -> Providers/Settings -> Disable new sign-ups), in addition
+# to `enable_signup = false` below. The app exposes no /signup route; every
+# account is created by an admin-guarded server action (schema.md §6).
+enable_signup = false
+
+# Email confirmations: admin-created users are already confirmed server-side
+# (admin.createUser({ email_confirm: true })), so confirmations stay OFF for
+# local dev. Set true only when testing invite/confirmation emails.
+enable_confirmations = false
