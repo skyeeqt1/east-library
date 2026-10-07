@@ -2,7 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { parseProfileRow } from "@/lib/auth/types";
 import {
+  changePasswordSchema,
   fieldErrorsFromZod,
   loginSchema,
 } from "@/lib/validations/auth";
@@ -11,6 +13,13 @@ import {
 const GENERIC_LOGIN_ERROR =
   "Invalid credentials. If you don't have an account, contact the library.";
 
+/** R-04: blocked accounts are rejected with a clear, non-generic message. */
+const BLOCKED_LOGIN_ERROR =
+  "This account has been blocked. Contact the library.";
+
+/** Synthetic auth-email domain for Student IDs (architecture.md §4, R-02). */
+const STUDENT_EMAIL_DOMAIN = "@escr.students";
+
 export interface LoginState {
   /** Form-level error (bad credentials, blocked account…). */
   error?: string;
@@ -18,27 +27,38 @@ export interface LoginState {
   fieldErrors?: Record<string, string>;
 }
 
+export interface ChangePasswordState {
+  /** Form-level error. */
+  error?: string;
+  /** Per-field validation errors, keyed by input `name`. */
+  fieldErrors?: Record<string, string>;
+  /** Set once the password has been updated. */
+  success?: boolean;
+}
+
 /**
- * Resolve the login identifier to the Supabase auth email.
+ * Candidate auth emails for a typed-in identifier, in priority order:
  *
- * Students authenticate with their ESCR Student ID and are mapped to a
- * synthetic email (`{student_id}@escr.students`) — architecture.md §4, R-02.
- * Admins sign in with their real email address.
+ *  1. contains `@`          → used verbatim (admins: librarian@escr.edu.ph)
+ *  2. no `@`                → `{id}@escr.students` (student-ID mapping, R-02)
+ *  3. no `@`, attempt 2     → the raw input as an email — the wrong-mapping
+ *     fallback so an admin can type a plain email prefix (or their Student-ID
+ *     shaped login) without knowing the internal convention.
  */
-function resolveAuthEmail(identifier: string): string {
-  const normalized = identifier.trim().toLowerCase();
-  return normalized.includes("@")
-    ? normalized
-    : `${normalized}@escr.students`;
+function candidateEmails(identifier: string): string[] {
+  const trimmed = identifier.trim();
+  if (trimmed.includes("@")) return [trimmed.toLowerCase()];
+
+  const mapped = trimmed.replace(/\s+/g, "").toLowerCase();
+  return [`${mapped}${STUDENT_EMAIL_DOMAIN}`, mapped];
 }
 
 /**
  * Sign in with Student ID (or admin email) + password.
  *
- * TODO(Phase 1): after a successful `signInWithPassword`, verify the profile
- * row: a BLOCKED account (R-04) must be signed out again and rejected with the
- * same generic message. Needs the `profiles` table from the concurrent
- * migrations, so it is intentionally not wired yet.
+ * Flow (architecture.md §4):
+ *   resolve identifier → synthetic/real email → signInWithPassword →
+ *   read `profiles` → reject BLOCKED (R-04) → redirect by role (FR-03).
  */
 export async function login(
   _prevState: LoginState | null,
@@ -53,26 +73,63 @@ export async function login(
     return { fieldErrors: fieldErrorsFromZod(parsed.error) };
   }
 
-  let authFailed = false;
+  const supabase = await createClient();
+  const candidates = candidateEmails(parsed.data.identifier);
 
-  try {
-    const supabase = await createClient();
+  let signedIn = false;
+  for (const email of candidates) {
     const { error } = await supabase.auth.signInWithPassword({
-      email: resolveAuthEmail(parsed.data.identifier),
+      email,
       password: parsed.data.password,
     });
-    authFailed = Boolean(error);
-  } catch {
-    authFailed = true;
+    if (!error) {
+      signedIn = true;
+      break;
+    }
   }
 
-  if (authFailed) {
+  if (!signedIn) {
     return { error: GENERIC_LOGIN_ERROR };
   }
 
-  // `redirect` throws NEXT_REDIRECT — keep it outside try/catch so the
-  // navigation is not swallowed. middleware.ts routes by role (FR-03).
-  redirect("/");
+  // Session cookie is set — now enforce the account state and the role route.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: GENERIC_LOGIN_ERROR };
+  }
+
+  let role: "ADMIN" | "STUDENT" = "STUDENT";
+  let status: "ACTIVE" | "BLOCKED" = "ACTIVE";
+  try {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+    const profile = parseProfileRow(data);
+    if (profile) {
+      role = profile.role;
+      status = profile.status;
+    } else {
+      // Profiles row unreadable — fall back to the stamped metadata role.
+      role = user.user_metadata?.role === "ADMIN" ? "ADMIN" : "STUDENT";
+    }
+  } catch {
+    // Network hiccup: do not lock a valid user out; metadata decides the role.
+    role = user.user_metadata?.role === "ADMIN" ? "ADMIN" : "STUDENT";
+  }
+
+  if (status === "BLOCKED") {
+    // R-04: end the session immediately and reject with the blocked message.
+    await supabase.auth.signOut();
+    return { error: BLOCKED_LOGIN_ERROR };
+  }
+
+  // `redirect` throws NEXT_REDIRECT — keep it outside any try/catch.
+  redirect(role === "ADMIN" ? "/admin/dashboard" : "/dashboard");
 }
 
 /**
@@ -86,4 +143,72 @@ export async function signOut(): Promise<void> {
     // Missing env / no session — signing out should always land on /login.
   }
   redirect("/login");
+}
+
+/**
+ * Change the signed-in user's own password (FR-06, R-05).
+ *
+ * Re-authenticates with the current password first (so "Current password is
+ * incorrect." is authoritative) and that fresh sign-in also satisfies
+ * Supabase's recent-login requirement for sensitive `updateUser` calls.
+ */
+export async function changePassword(
+  _prevState: ChangePasswordState | null,
+  formData: FormData,
+): Promise<ChangePasswordState> {
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+
+  if (!parsed.success) {
+    return { fieldErrors: fieldErrorsFromZod(parsed.error) };
+  }
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user?.email) redirect("/login");
+
+    // 1) Re-authenticate with the current password.
+    const { error: reauthError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: parsed.data.currentPassword,
+    });
+    if (reauthError) {
+      return { fieldErrors: { currentPassword: "Current password is incorrect." } };
+    }
+
+    // 2) Apply the new password.
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: parsed.data.newPassword,
+    });
+    if (updateError) {
+      if (updateError.message.toLowerCase().includes("same")) {
+        return {
+          fieldErrors: {
+            newPassword: "New password must be different from the current one.",
+          },
+        };
+      }
+      return { error: "Could not update the password. Please try again." };
+    }
+
+    return { success: true };
+  } catch (error) {
+    // NEXT_REDIRECT (signed out mid-flight) must propagate to the client.
+    if (isRedirectError(error)) throw error;
+    return { error: "Could not update the password. Please try again." };
+  }
+}
+
+/** Detect Next.js redirect()/notFound() control-flow errors. */
+function isRedirectError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const code = "digest" in error ? String(error.digest) : "";
+  return code.startsWith("NEXT_REDIRECT") || code.startsWith("NEXT_NOT_FOUND");
 }

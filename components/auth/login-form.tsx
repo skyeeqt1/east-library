@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { useActionState } from "react";
 import { login, type LoginState } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/input";
+import { PasswordField } from "@/components/auth/password-field";
 
 /**
  * Login form — FR-01 / FR-02 / R-01.
@@ -12,7 +12,9 @@ import { Field } from "@/components/ui/input";
  * • Single identifier field ("Student ID or Email") + password (show/hide).
  * • Zod validation runs inside the server action and echoes field errors.
  * • Generic credentials error (never reveals whether the account exists,
- *   R-04) rendered in an assertive live region.
+ *   R-04) rendered in an assertive live region; blocked accounts get the
+ *   explicit R-04 message.
+ * • On success the server action redirects by role (FR-03).
  * • No sign-up / register / reset link exists anywhere on this page.
  */
 export function LoginForm() {
@@ -20,7 +22,6 @@ export function LoginForm() {
     login,
     null,
   );
-  const [showPassword, setShowPassword] = useState(false);
 
   const identifierError = state?.fieldErrors?.identifier;
   const passwordError = state?.fieldErrors?.password;
@@ -50,29 +51,13 @@ export function LoginForm() {
         disabled={pending}
       />
 
-      <Field
+      <PasswordField
         label="Password"
         name="password"
-        type={showPassword ? "text" : "password"}
         autoComplete="current-password"
         required
         error={passwordError}
         disabled={pending}
-        trailing={
-          <button
-            type="button"
-            onClick={() => setShowPassword((visible) => !visible)}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            aria-pressed={showPassword}
-            className="flex size-9 items-center justify-center rounded-md text-gray-500 transition-colors duration-fast hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
-          >
-            {showPassword ? (
-              <EyeOff className="size-4" aria-hidden="true" />
-            ) : (
-              <Eye className="size-4" aria-hidden="true" />
-            )}
-          </button>
-        }
       />
 
       <Button type="submit" size="lg" className="w-full" loading={pending}>

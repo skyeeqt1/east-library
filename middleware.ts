@@ -10,9 +10,11 @@ import type { User } from "@supabase/supabase-js";
  *   2. Postgres RLS               — data cannot leak even if this fails
  *   3. server actions             — re-verify roles before every mutation
  *
- * Phase 0 notes:
- *   - The session check is final; the role lookup is TODO-wired to the
- *     `profiles` table (see getUserRole below) and falls back to STUDENT.
+ * Phase 1 notes:
+ *   - The session check is final; the role is read from `profiles` with an
+ *     `app_metadata` fallback (see getUserRole below). Verified end-to-end:
+ *     ADMIN → /admin/dashboard, STUDENT → /dashboard, and a student session
+ *     on /admin/* is bounced to /dashboard (E10).
  *   - /signup, /register (and friends) must 404 — R-01 / FR-02: the system
  *     exposes no self-registration route, ever.
  */
@@ -42,13 +44,12 @@ function respondNotFound(req: NextRequest): NextResponse {
 }
 
 /**
- * TODO(Phase 1): finalize the role source.
- *
- * Reads `profiles.role` (RLS allows reading your own row) and falls back to
- * the role stamped on the auth user's `app_metadata` at account creation.
- * If neither resolves (profiles table not migrated yet, RLS denies, network
- * hiccup), the role defaults to STUDENT — the safe, least-privileged choice
- * (students are redirected away from /admin/* either way).
+ * Role source: `profiles.role` (RLS allows reading your own row), falling
+ * back to the role stamped on the auth user's `app_metadata` at account
+ * creation. If neither resolves (network hiccup, missing row), the role
+ * defaults to STUDENT — the safe, least-privileged choice (students are
+ * redirected away from /admin/* either way; app/(admin)/admin/layout.tsx
+ * re-verifies the role server-side as a second layer).
  */
 async function getUserRole(
   supabase: ReturnType<typeof createServerClient>,

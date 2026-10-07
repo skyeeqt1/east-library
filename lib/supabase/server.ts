@@ -75,8 +75,8 @@ export async function createClient(): Promise<SupabaseClient> {
  *     re-verified on the server (R-03, R-31). Never import it into a client
  *     component or return it from an API route reachable without a role check.
  *
- * TODO(Phase 1): call sites land with account management — always pair with an
- * `assertAdmin()` guard (lib/auth/guards.ts) before any mutation.
+ * Phase 1 call sites live in lib/auth/admin-actions.ts (account management)
+ * — every mutation there is preceded by `assertAdmin()` (lib/auth/guards.ts).
  */
 export function getServiceClient(): SupabaseClient {
   const url = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
