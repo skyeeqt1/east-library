@@ -142,6 +142,16 @@ export function LoanCard({ row }: { row: StudentLoanRow }) {
             </p>
           ) : null}
 
+          {/* Phase 5 (FR-18) — a damaged return still owes a resolution */}
+          {row.condition_on_return === "DAMAGED" ? (
+            <div className="mt-3 flex items-start gap-2 rounded-md border border-warning-500/40 bg-warning-25 px-3 py-2 text-sm font-medium text-warning-700">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              <span>
+                This book was returned as DAMAGED — replacement/payment pending.
+              </span>
+            </div>
+          ) : null}
+
           {/* Live ₱ owed — UNPAID warns in error red, PAID confirms in green */}
           {fine && fine.status === "UNPAID" ? (
             <div className="mt-3 flex items-start gap-2 rounded-md border border-error-500/30 bg-error-25 px-3 py-2 text-sm font-medium text-error-700">

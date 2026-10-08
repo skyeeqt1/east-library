@@ -16,6 +16,7 @@ import {
   getDistinctCategories,
   type CatalogPage,
 } from "@/lib/catalog/availability";
+import { getBlockingNotices } from "@/lib/catalog/fines-read";
 import { getCurrentProfile } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,10 +31,6 @@ type SearchParams = Promise<{
   page?: string | string[];
 }>;
 
-/** US-7 banner copy (design §4.7 inline alert — error tint + icon). */
-const BALANCE_BANNER =
-  "You have an outstanding balance. Settle it at the library to request new books.";
-
 /** Everything the page renders, loaded together (one failed read = error UI). */
 interface LoadedCatalog {
   catalog: CatalogPage;
@@ -42,6 +39,8 @@ interface LoadedCatalog {
   pendingBookIds: Set<string>;
   /** Computed unpaid balance (R-27); null when the read failed (best-effort). */
   hasBalance: boolean;
+  /** R-25 blocking banners — unpaid OVERDUE / DAMAGE notices (Phase 5). */
+  notices: string[];
 }
 
 /**
@@ -105,6 +104,16 @@ export default async function StudentCatalogPage({
         ? null
         : (balanceRes.data as { balance_centavos: number; unpaid_count: number });
 
+    // R-25 blocking banners (Phase 5): best-effort — the hard block still
+    // applies server-side in getRequestEligibility (R-31) even if this read
+    // fails, and `hasBalance` above already drives the disabled buttons.
+    let notices: string[] = [];
+    try {
+      notices = await getBlockingNotices(me.id);
+    } catch {
+      notices = [];
+    }
+
     data = {
       catalog,
       categories,
@@ -112,6 +121,7 @@ export default async function StudentCatalogPage({
       hasBalance: balance
         ? balance.unpaid_count > 0 || balance.balance_centavos > 0
         : false,
+      notices,
     };
   } catch {
     data = null; // surface a readable error instead of an empty catalog
@@ -134,17 +144,22 @@ export default async function StudentCatalogPage({
       user={{ name: me.full_name, id: me.student_id ?? me.role }}
     >
       <div className="flex flex-col gap-6">
-        {/* R-25 / US-7 — unpaid balance inline alert (design §4.7) */}
-        {data?.hasBalance ? (
-          <div
-            role="status"
-            className="flex items-start gap-3 rounded-lg border border-error-500/30 bg-error-25 px-4 py-3"
-          >
-            <CircleAlert
-              className="mt-0.5 size-5 shrink-0 text-error-500"
-              aria-hidden="true"
-            />
-            <p className="text-sm font-medium text-error-700">{BALANCE_BANNER}</p>
+        {/* R-25 / US-7 — unpaid balance inline alerts (design §4.7):
+            one line per fine type, straight from getBlockingNotices() */}
+        {data && data.notices.length > 0 ? (
+          <div role="status" className="flex flex-col gap-2">
+            {data.notices.map((notice) => (
+              <div
+                key={notice}
+                className="flex items-start gap-3 rounded-lg border border-error-500/30 bg-error-25 px-4 py-3"
+              >
+                <CircleAlert
+                  className="mt-0.5 size-5 shrink-0 text-error-500"
+                  aria-hidden="true"
+                />
+                <p className="text-sm font-medium text-error-700">{notice}</p>
+              </div>
+            ))}
           </div>
         ) : null}
 

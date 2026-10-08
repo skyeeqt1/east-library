@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ArrowRight, ClipboardList, History, TriangleAlert } from "lucide-react";
+import { ArrowRight, CircleAlert, ClipboardList, History, TriangleAlert } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import {
   manilaToday,
   type DueSoonest,
 } from "@/lib/catalog/loans-read";
+import { getBlockingNotices } from "@/lib/catalog/fines-read";
 import { getCurrentProfile } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatPeso, formatRelativeTime } from "@/lib/utils";
@@ -35,6 +36,8 @@ interface DashboardData {
   balanceCentavos: number;
   /** PENDING requests + APPROVED-but-unreleased requests (the mini feed). */
   feed: FeedRow[];
+  /** R-25 blocking banners — unpaid OVERDUE / DAMAGE notices (Phase 5). */
+  notices: string[];
 }
 
 /** `YYYY-MM-DD` + n days via UTC math (no local-timezone drift). */
@@ -128,6 +131,16 @@ export default async function StudentDashboardPage() {
     ]);
     if (requestsRes.error) throw new Error(requestsRes.error.message);
 
+    // R-25 blocking banners (Phase 5): best-effort — if this read fails the
+    // banners are skipped, while the hard block still applies server-side in
+    // getRequestEligibility (R-31).
+    let notices: string[] = [];
+    try {
+      notices = await getBlockingNotices(me.id);
+    } catch {
+      notices = [];
+    }
+
     const feed: FeedRow[] = ((requestsRes.data ?? []) as unknown as JoinedFeedRow[])
       .filter((row) => !(row.status === "APPROVED" && row.loan_id !== null))
       .slice(0, 5)
@@ -145,6 +158,7 @@ export default async function StudentDashboardPage() {
           ? (balanceRes.data as { balance_centavos: number }).balance_centavos
           : 0) ?? 0,
       feed,
+      notices,
     };
   } catch {
     data = null; // surface a readable error instead of fake zeros
@@ -207,6 +221,25 @@ export default async function StudentDashboardPage() {
           </div>
         ) : (
           <>
+            {/* R-25 balance banners (Phase 5) — unpaid OVERDUE / DAMAGE lines
+                complement (never replace) the server-side request block */}
+            {data.notices.length > 0 ? (
+              <div role="status" className="flex flex-col gap-2">
+                {data.notices.map((notice) => (
+                  <div
+                    key={notice}
+                    className="flex items-start gap-3 rounded-lg border border-error-500/30 bg-error-25 px-4 py-3 text-sm font-medium text-error-700"
+                  >
+                    <CircleAlert
+                      className="mt-0.5 size-5 shrink-0 text-error-500"
+                      aria-hidden="true"
+                    />
+                    <p>{notice}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             {/* Countdown awareness banner — due within a day / already late */}
             {banner ? (
               <div

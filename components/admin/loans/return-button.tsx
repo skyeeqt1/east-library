@@ -173,6 +173,11 @@ export function ReturnButton({ loan }: { loan: ReturnableLoan }) {
             result={result}
             condition={returnedAs}
             dueDate={loan.due_date}
+            onAssess={() => {
+              // Phase 5 handoff: DAMAGED return → the Damages assessment queue.
+              setOpen(false);
+              router.push("/admin/damages");
+            }}
           />
         ) : (
           <>
@@ -283,10 +288,12 @@ function ReturnSuccessPanel({
   result,
   condition,
   dueDate,
+  onAssess,
 }: {
   result: ReturnLoanResult;
   condition: LoanCondition;
   dueDate: string;
+  onAssess: () => void;
 }) {
   return (
     <div>
@@ -324,9 +331,17 @@ function ReturnSuccessPanel({
       )}
 
       {condition === "DAMAGED" ? (
-        <p className="mt-3 rounded-md bg-gray-50 px-4 py-3 text-xs text-gray-700">
-          Copy marked DAMAGED — assess damage in Damages (Phase 5).
-        </p>
+        <div className="mt-3 rounded-md border border-warning-500/40 bg-warning-25 px-4 py-3">
+          {/* Phase 5 (FR-18): assessment is required before the copy can be
+              borrowed again — the handoff keeps the desk in one motion. */}
+          <p className="text-xs font-medium text-warning-700">
+            Copy marked DAMAGED — it stays out of circulation until the damage
+            is assessed and resolved.
+          </p>
+          <Button size="sm" onClick={onAssess} className="mt-3">
+            Assess damage now
+          </Button>
+        </div>
       ) : null}
     </div>
   );
