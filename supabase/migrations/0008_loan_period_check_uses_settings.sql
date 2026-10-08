@@ -1,0 +1,55 @@
+-- =============================================================================
+-- 0008_loan_period_check_uses_settings.sql — drop the hardcoded +7 CHECK that
+-- contradicts the admin-editable loan period setting (2026-10-08)
+--
+-- WHY (rules §1 / settings table vs. migration 0001 constraint):
+--   `loan_period_days` is a live admin-editable setting (lib/validations/
+--   settings.ts: valid range 1–90, default 7). `release_loan()` reads it at
+--   write time and computes `due_date = Manila-today + loan_period_days`
+--   (0007 line ~36-53). But 0001_init.sql line 102 hardcodes:
+--       constraint due_within_loan_period check (due_date <= (released_at::date + 7))
+--   So any setting > 7 (e.g. 14) makes the INSERT inside release_loan() fail
+--   with 23514 check-violation ("due_within_loan_period") — the admin UI
+--   accepts the setting but every subsequent release breaks.
+--
+-- WHY NOT A READS-THE-SETTING CHECK CONSTRAINT:
+--   CHECK constraint expressions must be IMMUTABLE; a scalar subquery against
+--   public.settings is a subquery and is rejected outright by Postgres
+--   ("cannot use subquery in check constraint"). There is no way to express
+--   "due_date <= released_at + current setting" as a CHECK.
+--
+-- DECISION: Option A — drop the constraint, no replacement trigger.
+--   Safe-by reasoning (evidence, 2026-10-08, repo @ 4da57a3):
+--   * `release_loan()` (0007) is the ONLY writer of `loans.due_date`:
+--     - migrations: only 0002/0007 release_loan() INSERT loans with due_date;
+--       0007 supersedes 0002 (create or replace, same signature). No other
+--       migration INSERT/UPDATE touches due_date (record_return sets
+--       returned_at/status; run_overdue_sweep sets status only).
+--     - app code: every `.from("loans")` in app/ lib/ components/ is a
+--       `.select(...)` read (verified by grep for insert/update/upsert/delete
+--       after `.from("loans")` — zero writes).
+--   * release_loan() enforces the real rule with the live setting and raises
+--     friendly errors; the DB-level CHECK added nothing a function-authoritative
+--     write path didn't already guarantee.
+--   * Zero perf cost: no per-row expression evaluation, no trigger overhead.
+--   * R-17's "due_date ≤ released_at + loan_period_days" invariant is still
+--     enforced — by the only writer, with the correct (editable) bound.
+--   Option B (BEFORE INSERT/UPDATE trigger) was rejected as redundant: it
+--   would re-validate every write for a rule that already holds by
+--   construction.
+--
+-- DOC DEVIATION (docs are frozen — reported, not edited):
+--   schema.md §2.4 loans (line 248) documents
+--     `constraint due_within_loan_period check (due_date <= (released_at::date + 7))`
+--   and rules.md R-17 says "due_date ≤ released_at + 7 days always". Both
+--   describe the pre-fix state. This migration is an intentional deviation:
+--   rules §1 makes loan_period_days editable 1–90, and release_loan() (0007)
+--   computes due_date from that setting — a hardcoded +7 CHECK directly
+--   contradicts the editable-setting rule. Constraint is dropped; the bound
+--   now lives in the setting (default 7 preserved).
+--
+-- IDEMPOTENT: `drop constraint if exists`.
+-- =============================================================================
+
+alter table public.loans
+  drop constraint if exists due_within_loan_period;
