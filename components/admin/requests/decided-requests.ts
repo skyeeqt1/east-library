@@ -42,6 +42,12 @@ export interface DecidedRequestRow {
   decline_reason: string | null;
   created_at: string;
   decided_at: string | null;
+  /**
+   * `loan_requests.loan_id` — set once the book has been released at the desk
+   * (R-14 links the request to its loan). `null` on an APPROVED row means
+   * **awaiting pickup**, i.e. the row that still offers "Release book".
+   */
+  loan_id: string | null;
 }
 
 /** Paginated decision listing (25/page, mirroring the pending queue). */
@@ -107,7 +113,7 @@ export async function getDecidedRequests(
   const builder = supabase
     .from("loan_requests")
     .select(
-      `id, student_id, book_id, status, decline_reason, created_at, decided_at,
+      `id, student_id, book_id, status, decline_reason, created_at, decided_at, loan_id,
        student:profiles!loan_requests_student_id_fkey(full_name, student_id, course_section),
        book:books(title, author)`,
       { count: "exact" },
@@ -135,6 +141,7 @@ export async function getDecidedRequests(
     decline_reason: string | null;
     created_at: string;
     decided_at: string | null;
+    loan_id: string | null;
     student:
       | { full_name: string; student_id: string | null; course_section: string | null }
       | { full_name: string; student_id: string | null; course_section: string | null }[]
@@ -160,6 +167,7 @@ export async function getDecidedRequests(
         decline_reason: row.decline_reason,
         created_at: row.created_at,
         decided_at: row.decided_at,
+        loan_id: row.loan_id ?? null,
       };
     },
   );

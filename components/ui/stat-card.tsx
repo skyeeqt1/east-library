@@ -5,6 +5,11 @@ import { Sparkline } from "@/components/ui/sparkline";
 export interface StatCardProps {
   /** 14px/500 gray-500 header (design §4.2). */
   title: string;
+  /**
+   * Optional 12px gray-500 line under the title (e.g. the student Due card's
+   * "Next: Oct 15" subtitle) — rendered only when provided.
+   */
+  subtitle?: string;
   /** Big metric — 24–36px/600 gray-900 with −0.02em tracking. */
   value: string | number;
   /**
@@ -32,6 +37,7 @@ export interface StatCardProps {
  */
 export function StatCard({
   title,
+  subtitle,
   value,
   valueClassName,
   delta,
@@ -50,7 +56,12 @@ export function StatCard({
       )}
     >
       <div className="flex items-start justify-between gap-4">
-        <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+          {subtitle ? (
+            <p className="mt-1 truncate text-xs text-gray-500">{subtitle}</p>
+          ) : null}
+        </div>
         {trailing}
       </div>
 

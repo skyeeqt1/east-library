@@ -14,6 +14,7 @@ import {
   Tr,
 } from "@/components/ui/table";
 import { RequestRowActions } from "@/components/admin/requests/request-row-actions";
+import { ReleaseBookButton } from "@/components/admin/requests/release-book-button";
 import { RequestsPagination } from "@/components/admin/requests/requests-pagination";
 import { RequestsToolbar } from "@/components/admin/requests/requests-toolbar";
 import {
@@ -267,7 +268,7 @@ export default async function AdminRequestsPage({
             ) : (
               /* -------------------- Approved / Declined / All ---------------- */
               <Table
-                minWidth={1120}
+                minWidth={1280}
                 footer={
                   <RequestsPagination
                     page={page}
@@ -283,6 +284,7 @@ export default async function AdminRequestsPage({
                   <Th>Status</Th>
                   <Th>Decided</Th>
                   <Th>Reason</Th>
+                  <Th className="text-right">Actions</Th>
                 </TableHead>
                 <TableBody>
                   {(data.decided?.rows ?? []).map((row) => (
@@ -338,6 +340,28 @@ function DecidedRow({ row }: { row: DecidedRequestRow }) {
           <span className="block text-sm text-gray-700">{row.decline_reason}</span>
         ) : (
           <span className="text-gray-500">—</span>
+        )}
+      </Td>
+      <Td>
+        {/* R-14: APPROVED rows await the desk release; the rest have no action. */}
+        {row.status === "APPROVED" ? (
+          row.loan_id ? (
+            <span className="block text-right text-xs text-gray-500">
+              Released
+            </span>
+          ) : (
+            <div className="flex justify-end">
+              <ReleaseBookButton
+                request={{
+                  id: row.id,
+                  student_name: row.student_name,
+                  title: row.title,
+                }}
+              />
+            </div>
+          )
+        ) : (
+          <span className="block text-right text-gray-500">—</span>
         )}
       </Td>
     </Tr>
