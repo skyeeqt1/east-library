@@ -1,207 +1,328 @@
 import type { Metadata } from "next";
-import { Pencil, Eye } from "lucide-react";
+import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
-import { StatusPill } from "@/components/ui/badge";
 import { StatCard } from "@/components/ui/stat-card";
-import { Tabs } from "@/components/ui/tabs";
+import { ActivityTable } from "@/components/admin/dashboard/activity-table";
+import { DashboardPagination } from "@/components/admin/dashboard/dashboard-pagination";
 import {
-  PrimaryCell,
-  Table,
-  TableBody,
-  TableFooter,
-  Td,
-  Th,
-  ThCheckbox,
-  TdCheckbox,
-  TableHead,
-  Tr,
-} from "@/components/ui/table";
+  DashboardTabs,
+  DashboardToolbar,
+} from "@/components/admin/dashboard/dashboard-toolbar";
+import {
+  DASHBOARD_PER_PAGE,
+  buildDashboardPath,
+  parseDashboardQuery,
+} from "@/components/admin/dashboard/dashboard-query";
+import {
+  getAdminActivity,
+  getAdminActivityCounts,
+  getAdminDashboardStats,
+} from "@/lib/catalog/activity-read";
+import type { ActivityStatus, ActivityTab } from "@/lib/catalog/activity-types";
+import { getCurrentProfile } from "@/lib/auth/guards";
 
 export const metadata: Metadata = {
   title: "Library Dashboard",
 };
 
-const DASHBOARD_TABS = [
-  { id: "all", label: "All activity", count: 48 },
-  { id: "pending", label: "Pending requests", count: 12 },
-  { id: "overdue", label: "Overdue", count: 7 },
-  { id: "returns", label: "Returns", count: 15 },
-  { id: "fines", label: "Fines", count: 9 },
-];
+/** Session cookie + searchParams are read per request — blocking route. */
+export const instant = false;
 
-const TOTAL_BOOKS_TREND = [64, 68, 66, 72, 70, 76, 74, 80, 78, 84, 82, 88, 86, 92];
-const ACTIVE_LOANS_TREND = [42, 48, 45, 52, 50, 58, 55, 62, 60, 66, 72, 68, 76, 82];
-const OVERDUE_TREND = [30, 28, 32, 27, 25, 29, 24, 22, 26, 21, 19, 20, 17, 16];
+type SearchParams = Promise<{
+  tab?: string | string[];
+  status?: string | string[];
+  q?: string | string[];
+  page?: string | string[];
+}>;
 
-interface ActivityRow {
-  id: string;
-  student: string;
-  studentId: string;
-  book: string;
-  requested: string;
-  due: string;
-  status: string;
+/** Everything the page renders, loaded together (one failed read = error UI). */
+interface LoadedDashboard {
+  counts: Awaited<ReturnType<typeof getAdminActivityCounts>>;
+  activity: Awaited<ReturnType<typeof getAdminActivity>>;
+  stats: Awaited<ReturnType<typeof getAdminDashboardStats>>;
 }
 
-const ACTIVITY_ROWS: ActivityRow[] = [
-  {
-    id: "1",
-    student: "Maria Santos",
-    studentId: "2024-1056",
-    book: "The Great Gatsby",
-    requested: "Released Oct 1, 2026",
-    due: "Oct 8, 2026",
-    status: "Active",
+/** Singular tab word for empty-state copy — "pending" → "pending requests". */
+const TAB_COPY: Record<
+  ActivityTab,
+  { label: string; body: string }
+> = {
+  all: {
+    label: "activity",
+    body: "Borrow activity will appear here as students request books.",
   },
-  {
-    id: "2",
-    student: "Juan Dela Cruz",
-    studentId: "2024-0871",
-    book: "Clean Code",
-    requested: "Requested Oct 5, 2026",
-    due: "—",
-    status: "Pending",
+  pending: {
+    label: "pending requests",
+    body: "New borrow requests land here the moment a student submits one.",
   },
-  {
-    id: "3",
-    student: "Angela Reyes",
-    studentId: "2023-1120",
-    book: "Atomic Habits",
-    requested: "Released Sep 26, 2026",
-    due: "Oct 3, 2026",
-    status: "Overdue",
+  overdue: {
+    label: "overdue activity",
+    body: "Loans that pass their due date show up here automatically.",
   },
-  {
-    id: "4",
-    student: "Paolo Mendoza",
-    studentId: "2024-0333",
-    book: "Dune",
-    requested: "Released Sep 23, 2026",
-    due: "Sep 30, 2026",
-    status: "Returned",
+  returns: {
+    label: "returns",
+    body: "Finished loans are archived here with their return details.",
   },
-];
+  fines: {
+    label: "fines",
+    body: "Charges from overdue returns and damage assessments appear here.",
+  },
+};
+
+/** Pill noun for empty-state copy — "active" → "active loans". */
+const STATUS_COPY: Record<Exclude<ActivityStatus, "all">, string> = {
+  pending: "pending requests",
+  active: "active loans",
+  overdue: "overdue loans",
+  returned: "returned loans",
+  unpaid: "unpaid fines",
+};
 
 /**
- * Admin dashboard — FR-21.
+ * Pick the empty-state copy + CTA for the current URL state — priority
+ * mirrors the other admin tables (rules of thumb: first explain the
+ * *interaction* that emptied the page, then the filters, then the data):
  *
- * Phase 6 replaces the dummy numbers with live data; this placeholder renders
- * the reference rhythm (header → tabs → 3 stat cards → borrow activity table)
- * so the layout can be eyeballed from Phase 0 onward.
+ *   1. out-of-range page  → escape hatch back to page 1,
+ *   2. `q` search         → clear search,
+ *   3. status pill        → show all statuses,
+ *   4. single tab         → view all activity,
+ *   5. fresh install (no titles, no filters) → create-books CTA,
+ *   6. default            → the "no activity yet" baseline.
  */
-export default function AdminDashboardPage() {
+function emptyState(opts: {
+  onCurrentPage: boolean;
+  q: string;
+  status: ActivityStatus;
+  tab: ActivityTab;
+  totalBooks: number;
+}): { title: string; body: string; action?: ReactNode } {
+  const path = (overrides: Parameters<typeof buildDashboardPath>[0]) =>
+    buildDashboardPath({ tab: opts.tab, status: opts.status, q: opts.q, ...overrides });
+
+  if (opts.onCurrentPage) {
+    return {
+      title: "Nothing on this page.",
+      body: "Return to the first page to see the rest of the activity.",
+      action: (
+        <Button variant="secondary" size="md" href={path({ page: 1 })}>
+          Back to first page
+        </Button>
+      ),
+    };
+  }
+  if (opts.q) {
+    return {
+      title: "No activity matches your search.",
+      body: "Try a student name or number, or a book title or author.",
+      action: (
+        <Button variant="secondary" size="md" href={path({ q: "", page: 1 })}>
+          Clear search
+        </Button>
+      ),
+    };
+  }
+  if (opts.status !== "all") {
+    return {
+      title: `No ${STATUS_COPY[opts.status]} to show.`,
+      body:
+        opts.tab === "all"
+          ? "Nothing with that status right now — try another pill."
+          : `No ${STATUS_COPY[opts.status]} on this tab. Try another status pill or the All activity tab.`,
+      action: (
+        <Button
+          variant="secondary"
+          size="md"
+          href={path({ status: "all", page: 1 })}
+        >
+          Show all statuses
+        </Button>
+      ),
+    };
+  }
+  if (opts.tab !== "all") {
+    return {
+      title: `No ${TAB_COPY[opts.tab].label} yet.`,
+      body: TAB_COPY[opts.tab].body,
+      action: (
+        <Button variant="secondary" size="md" href={path({ tab: "all", page: 1 })}>
+          View all activity
+        </Button>
+      ),
+    };
+  }
+  if (opts.totalBooks === 0) {
+    return {
+      title: "No activity yet.",
+      body: "Borrow activity will appear here as students request books. Create books in the catalog to get started.",
+      action: <Button size="md" href="/admin/books">Create books</Button>,
+    };
+  }
+  return {
+    title: "No activity yet.",
+    body: "Borrow activity will appear here as students request books.",
+  };
+}
+
+/**
+ * Admin dashboard — FR-21 / design §5.
+ *
+ * Server component reading `searchParams` (tab, status pill, search `q`,
+ * page) behind the session guard shared by every admin page. Three reads
+ * run in parallel through the cookie-aware anon client (RLS applies,
+ * schema.md §4):
+ *
+ *   - `getAdminActivityCounts()` — exact tab badge counters,
+ *   - `getAdminActivity()`       — the paginated "Borrow activity" union
+ *                                  (lib/catalog/activity-read.ts),
+ *   - `getAdminDashboardStats()`  — the 3 stat cards + 14-day trends.
+ *
+ * Page rhythm per design §5: header → tabs → stat cards → toolbar →
+ * table → pagination. Chrome (search + ⌘K, status pills, selection,
+ * pagination) lives in `components/admin/dashboard/*` and writes only the
+ * URL, so back/forward and deep links always reproduce the same view.
+ */
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const { tab, status, q, page } = parseDashboardQuery(await searchParams);
+
+  const me = await getCurrentProfile();
+  if (!me) redirect("/login");
+
+  let data: LoadedDashboard | null = null;
+  try {
+    const [counts, activity, stats] = await Promise.all([
+      getAdminActivityCounts(),
+      getAdminActivity({
+        tab,
+        q: q || undefined,
+        status,
+        page,
+        perPage: DASHBOARD_PER_PAGE,
+      }),
+      getAdminDashboardStats(),
+    ]);
+    data = { counts, activity, stats };
+  } catch {
+    data = null; // surface a readable error instead of an empty table
+  }
+
+  const rows = data?.activity.rows ?? [];
+  const total = data?.activity.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / DASHBOARD_PER_PAGE));
+  const onCurrentPage = page > pageCount;
+  const empty = emptyState({
+    onCurrentPage,
+    q,
+    status,
+    tab,
+    totalBooks: data?.stats.totalBooks ?? 0,
+  });
+
   return (
     <AppShell
       title="Library Dashboard"
       navVariant="admin"
-      user={{ name: "Library Admin", id: "ADM-0001" }}
+      user={{ name: me.full_name, id: me.student_id ?? "LIBRARIAN" }}
       actions={
         <>
           <Button variant="secondary" size="md" href="/dashboard">
             Switch dashboard
           </Button>
-          <Button size="md" disabled>
+          <Button size="md" disabled title="Coming in a later phase">
             Export report
           </Button>
         </>
       }
     >
       <div className="flex flex-col gap-6">
-        {/* Tab row (design §5.1) */}
-        <Tabs tabs={DASHBOARD_TABS} activeId="all" aria-label="Activity filters" />
-
-        {/* Three stat cards (design §5.2) */}
-        <section aria-label="Key metrics" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard
-            title="Total books"
-            value="1,284"
-            delta={{ value: "1.2%", direction: "up" }}
-            data={TOTAL_BOOKS_TREND}
-          />
-          <StatCard
-            title="Active loans"
-            value="128"
-            delta={{ value: "2.4%", direction: "up" }}
-            data={ACTIVE_LOANS_TREND}
-          />
-          <StatCard
-            title="Overdue this week"
-            value="17"
-            delta={{ value: "0.8%", direction: "down" }}
-            data={OVERDUE_TREND}
-          />
-        </section>
-
-        {/* Borrow activity table (design §5.3) */}
-        <section aria-labelledby="borrow-activity-heading">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <h2 id="borrow-activity-heading" className="text-lg font-semibold text-gray-900">
-              Borrow activity
-            </h2>
-            <p className="text-xs text-gray-500">
-              <span className="font-medium text-gray-700">Phase 6</span> — live
-              data, ⌘K search, filters and pagination land here.
+        {data === null ? (
+          <div
+            role="alert"
+            className="rounded-lg border border-error-500 bg-error-25 px-6 py-10 text-center"
+          >
+            <p className="text-sm font-medium text-error-700">
+              Could not load the dashboard.
+            </p>
+            <p className="mt-1 text-sm text-error-700">
+              Please try again in a moment.
             </p>
           </div>
+        ) : (
+          <>
+            {/* Tab row with live counts (design §5.1) */}
+            <DashboardTabs tab={tab} counts={data.counts} q={q} />
 
-          <Table
-            minWidth={860}
-            footer={<TableFooter page={1} pageCount={1} perPage={10} />}
-          >
-            <TableHead>
-              <ThCheckbox>
-                <span className="sr-only">Select</span>
-              </ThCheckbox>
-              <Th>Student</Th>
-              <Th>Book</Th>
-              <Th>Requested / Released</Th>
-              <Th>Due date</Th>
-              <Th>Status</Th>
-              <Th className="text-right">Actions</Th>
-            </TableHead>
-            <TableBody>
-              {ACTIVITY_ROWS.map((row) => (
-                <Tr key={row.id}>
-                  <TdCheckbox>
-                    <input
-                      type="checkbox"
-                      aria-label={`Select row for ${row.student}`}
-                      className="size-4 rounded border-gray-300 accent-primary-500"
-                    />
-                  </TdCheckbox>
-                  <Td>
-                    <PrimaryCell primary={row.student} secondary={row.studentId} />
-                  </Td>
-                  <Td className="font-medium text-gray-900">{row.book}</Td>
-                  <Td>{row.requested}</Td>
-                  <Td>{row.due}</Td>
-                  <Td>
-                    <StatusPill status={row.status} />
-                  </Td>
-                  <Td>
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        type="button"
-                        aria-label={`View ${row.book} loan`}
-                        className="flex size-9 items-center justify-center rounded-md text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
-                      >
-                        <Eye className="size-4" aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Edit ${row.book} loan`}
-                        className="flex size-9 items-center justify-center rounded-md text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
-                      >
-                        <Pencil className="size-4" aria-hidden="true" />
-                      </button>
-                    </div>
-                  </Td>
-                </Tr>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
+            {/* Three stat cards with deltas + 14-day sparklines (design §5.2) */}
+            <section
+              aria-label="Key metrics"
+              className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              <StatCard
+                title="Total books"
+                value={data.stats.totalBooks}
+                delta={data.stats.deltas.totalBooks}
+                data={data.stats.trends.totalBooks}
+              />
+              <StatCard
+                title="Active loans"
+                value={data.stats.activeLoans}
+                delta={data.stats.deltas.activeLoans}
+                data={data.stats.trends.activeLoans}
+              />
+              <StatCard
+                title="Overdue this week"
+                value={data.stats.overdueThisWeek}
+                delta={data.stats.deltas.overdueThisWeek}
+                valueClassName={
+                  data.stats.overdueThisWeek > 0 ? "text-error-700" : undefined
+                }
+                data={data.stats.trends.overdue}
+              />
+            </section>
+
+            {/* Borrow activity section: search + ⌘K, status pills, count (§5.3) */}
+            <section aria-labelledby="borrow-activity-heading">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                <h2
+                  id="borrow-activity-heading"
+                  className="text-lg font-semibold text-gray-900"
+                >
+                  Borrow activity
+                </h2>
+              </div>
+
+              <div className="mb-4">
+                <DashboardToolbar
+                  tab={tab}
+                  status={status}
+                  q={q}
+                  total={total}
+                  truncated={data.activity.truncated}
+                />
+              </div>
+
+              <ActivityTable
+                rows={rows}
+                empty={empty}
+                footer={
+                  <DashboardPagination
+                    page={page}
+                    pageCount={pageCount}
+                    tab={tab}
+                    status={status}
+                    q={q}
+                  />
+                }
+              />
+            </section>
+          </>
+        )}
       </div>
     </AppShell>
   );

@@ -18,8 +18,12 @@ export interface StatCardProps {
    * is owed — design §2.1 semantic colors). Defaults to gray-900.
    */
   valueClassName?: string;
-  /** Trend vs the previous period: ▲ success-500 / ▼ error-500. */
-  delta?: { value: string; direction: "up" | "down" };
+  /**
+   * Trend vs the previous period: ▲ success-500 / ▼ error-500.
+   * `"flat"` renders an en-dash in gray — the zero-baseline state where a
+   * percent change would divide by zero (fresh installs, Phase 6 dashboard).
+   */
+  delta?: { value: string; direction: "up" | "down" | "flat" };
   /** Right-hand caption, e.g. "vs last week". */
   caption?: string;
   /** 7–30 points feeding the sparkline. */
@@ -47,6 +51,7 @@ export function StatCard({
   className,
 }: StatCardProps) {
   const isUp = delta?.direction === "up";
+  const isDown = delta?.direction === "down";
 
   return (
     <article
@@ -78,10 +83,18 @@ export function StatCard({
           <span
             className={cn(
               "flex items-center gap-1 text-xs font-medium",
-              isUp ? "text-success-500" : "text-error-500",
+              isUp
+                ? "text-success-500"
+                : isDown
+                  ? "text-error-500"
+                  : "text-gray-500",
             )}
           >
-            <span aria-hidden="true">{isUp ? "▲" : "▼"}</span>
+            <span aria-hidden="true">{isUp ? "▲" : isDown ? "▼" : "–"}</span>
+            {/* Direction in words for screen readers (the glyph is hidden). */}
+            <span className="sr-only">
+              {isUp ? "up" : isDown ? "down" : "no change"}
+            </span>
             <span>{delta.value}</span>
           </span>
         ) : null}
