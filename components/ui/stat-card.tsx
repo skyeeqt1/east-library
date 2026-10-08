@@ -7,6 +7,12 @@ export interface StatCardProps {
   title: string;
   /** Big metric — 24–36px/600 gray-900 with −0.02em tracking. */
   value: string | number;
+  /**
+   * Optional token classes for the metric itself (e.g. the student balance
+   * card renders `text-success-700` at ₱0.00 and `text-error-700` when money
+   * is owed — design §2.1 semantic colors). Defaults to gray-900.
+   */
+  valueClassName?: string;
   /** Trend vs the previous period: ▲ success-500 / ▼ error-500. */
   delta?: { value: string; direction: "up" | "down" };
   /** Right-hand caption, e.g. "vs last week". */
@@ -27,6 +33,7 @@ export interface StatCardProps {
 export function StatCard({
   title,
   value,
+  valueClassName,
   delta,
   caption = "vs last week",
   data,
@@ -48,7 +55,12 @@ export function StatCard({
       </div>
 
       <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-4xl font-semibold tracking-tight text-gray-900">
+        <span
+          className={cn(
+            "text-4xl font-semibold tracking-tight text-gray-900",
+            valueClassName,
+          )}
+        >
           {value}
         </span>
         {delta ? (
