@@ -1,8 +1,13 @@
 import { Badge, toneForStatus } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Check, Clock, TriangleAlert } from "lucide-react";
+import {
+  CountdownChip,
+  countdownFor,
+  withOwedAmount,
+} from "@/components/student/countdown-chip";
 import type { StudentLoanRow } from "@/lib/catalog/loans-read";
-import { cn, formatPeso } from "@/lib/utils";
+import { formatPeso } from "@/lib/utils";
 import type { LoanStatus } from "@/lib/validations/loan";
 
 /**
@@ -34,37 +39,16 @@ function initialsOf(title: string): string {
   return (first + second).toUpperCase();
 }
 
-type Countdown = { tone: "success" | "warning" | "error"; text: string };
-
 /**
- * Due countdown chip — design §6 colors, **exact**:
- *   >3 days → success (green) · 1–3 days → warning (orange) ·
- *   due today / overdue → error (red), with a clock icon per §6.
- * Day figures come from the Manila date-only math in
- * `lib/catalog/loans-read.ts`; RETURNED rows get no chip.
+ * Due countdown chip — design §6 colours, resolved by the shared
+ * `components/student/countdown-chip.tsx` so the loans page, the dashboard's
+ * "My active loans" cards and the dashboard hero card all follow the exact
+ * same rule (green >3d · orange 1–3d · red due-today/overdue, clock icon,
+ * day figure in the text). The red chip additionally carries the **live ₱
+ * owed** when an UNPAID fine row exists (`withOwedAmount`); a loan that went
+ * overdue since the last daily sweep has no fine row yet, so the card shows
+ * the "fines update daily" note below instead of an amount.
  */
-function countdownOf(row: StudentLoanRow): Countdown | null {
-  if (row.status === "RETURNED") return null;
-  if (row.days_late !== undefined && row.days_late > 0) {
-    return {
-      tone: "error",
-      text: `${row.days_late} ${row.days_late === 1 ? "day" : "days"} overdue`,
-    };
-  }
-  const left = row.days_remaining;
-  if (left === undefined) return null;
-  if (left === 0) return { tone: "error", text: "Due today" };
-  if (left <= 3) {
-    return { tone: "warning", text: `${left} ${left === 1 ? "day" : "days"} left` };
-  }
-  return { tone: "success", text: `${left} days left` };
-}
-
-const CHIP_TONES: Record<Countdown["tone"], string> = {
-  success: "bg-success-25 text-success-700",
-  warning: "bg-warning-25 text-warning-700",
-  error: "bg-error-25 text-error-700",
-};
 
 /**
  * One loan as a countdown card (design §6 — card-based, countdown-first:
@@ -75,8 +59,14 @@ const CHIP_TONES: Record<Countdown["tone"], string> = {
  * mutation buttons elsewhere in the app are client code.
  */
 export function LoanCard({ row }: { row: StudentLoanRow }) {
-  const countdown = countdownOf(row);
   const fine = row.fine;
+  const countdown = withOwedAmount(countdownFor(row), fine);
+  /** Overdue but the daily sweep (R-18) has not recorded a fine row yet. */
+  const overdueWithoutFine =
+    row.status !== "RETURNED" &&
+    row.days_late !== undefined &&
+    row.days_late > 0 &&
+    fine === null;
 
   return (
     <Card padded={false}>
@@ -122,15 +112,7 @@ export function LoanCard({ row }: { row: StudentLoanRow }) {
                 {formatDate(row.due_date)}
               </p>
               {countdown ? (
-                <span
-                  className={cn(
-                    "mt-1.5 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium",
-                    CHIP_TONES[countdown.tone],
-                  )}
-                >
-                  <Clock className="size-3 shrink-0" aria-hidden="true" />
-                  {countdown.text}
-                </span>
+                <CountdownChip countdown={countdown} className="mt-1.5" />
               ) : null}
             </div>
           </div>
@@ -175,6 +157,13 @@ export function LoanCard({ row }: { row: StudentLoanRow }) {
               <span>
                 {`Overdue fine: ${formatPeso(fine.amount_centavos)} — Waived`}
               </span>
+            </div>
+          ) : overdueWithoutFine ? (
+            // R-18: fines are upserted by the daily sweep — same-day overdue
+            // has no amount yet, so say that instead of showing a fake ₱0.
+            <div className="mt-3 flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700">
+              <Clock className="size-4 shrink-0" aria-hidden="true" />
+              <span>No fine recorded yet — overdue fines update daily.</span>
             </div>
           ) : null}
         </div>

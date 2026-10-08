@@ -62,6 +62,11 @@ export interface StudentRequestRow {
   decline_reason: string | null;
   created_at: string;
   decided_at: string | null;
+  /** `loan_requests.loan_id` — set once the book is released at the desk
+   *  (R-14); feeds the third "Released" step of the design §6 stepper. */
+  loan_id: string | null;
+  /** `loans.released_at` for the linked loan (null until release). */
+  released_at: string | null;
 }
 
 /** Paginated student request listing. */
@@ -351,7 +356,7 @@ export async function getStudentRequests(
   let builder = supabase
     .from("loan_requests")
     .select(
-      "id, book_id, status, decline_reason, created_at, decided_at, book:books(title, author)",
+      "id, book_id, status, decline_reason, created_at, decided_at, loan_id, book:books(title, author)",
       { count: "exact" },
     )
     .eq("student_id", studentId);
@@ -377,6 +382,7 @@ export async function getStudentRequests(
     decline_reason: string | null;
     created_at: string;
     decided_at: string | null;
+    loan_id: string | null;
     book: { title: string; author: string } | { title: string; author: string }[] | null;
   }
 
@@ -392,9 +398,30 @@ export async function getStudentRequests(
         decline_reason: row.decline_reason,
         created_at: row.created_at,
         decided_at: row.decided_at,
+        loan_id: row.loan_id ?? null,
+        released_at: null as string | null,
       };
     },
   );
+
+  // Design §6 "Released" step: resolve the linked loan's `released_at` in one
+  // batched read (same merge style as getPendingRequests' availability pass).
+  // RLS scopes `loans` to the caller's own rows, so this can never leak.
+  const loanIds = rows
+    .map((row) => row.loan_id)
+    .filter((value): value is string => value !== null);
+  if (loanIds.length > 0) {
+    const loans = await supabase.from("loans").select("id, released_at").in("id", loanIds);
+    if (loans.error) fail("Could not load your requests.", loans.error.message);
+    const releasedByLoan = new Map(
+      ((loans.data ?? []) as { id: string; released_at: string | null }[]).map(
+        (loan) => [loan.id, loan.released_at ?? null],
+      ),
+    );
+    for (const row of rows) {
+      row.released_at = row.loan_id ? (releasedByLoan.get(row.loan_id) ?? null) : null;
+    }
+  }
 
   return { rows, total: count ?? rows.length, page, perPage };
 }

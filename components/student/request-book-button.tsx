@@ -2,7 +2,6 @@
 
 import { useCallback, useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
 import { submitBookRequest } from "@/lib/student/request-actions";
 import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
@@ -105,10 +104,8 @@ export function RequestBookButton({
         aria-describedby={hint ? hintId : undefined}
       >
         {requested ? (
-          <>
-            Requested
-            <Check className="size-4" aria-hidden="true" />
-          </>
+          // US-2 AC — "the button reads 'Already requested' and is disabled".
+          "Already requested"
         ) : unavailable ? (
           "No copies"
         ) : isPending ? (

@@ -10,8 +10,12 @@ export interface StatCardProps {
    * "Next: Oct 15" subtitle) — rendered only when provided.
    */
   subtitle?: string;
-  /** Big metric — 24–36px/600 gray-900 with −0.02em tracking. */
-  value: string | number;
+  /**
+   * Big metric — 24–36px/600 gray-900 with −0.02em tracking. Accepts a
+   * ReactNode so callers can render an icon or a chip inline (the student
+   * dashboard's "Due soon" card passes the design §6 countdown chip).
+   */
+  value: ReactNode;
   /**
    * Optional token classes for the metric itself (e.g. the student balance
    * card renders `text-success-700` at ₱0.00 and `text-error-700` when money

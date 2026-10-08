@@ -36,6 +36,7 @@ export default async function StudentProfilePage() {
     { label: "Full name", value: me.full_name },
     { label: "Student ID", value: <span className="font-mono">{me.student_id ?? "—"}</span> },
     { label: "Course / Section", value: me.course_section ?? "—" },
+    { label: "Role", value: me.role === "ADMIN" ? "Administrator" : "Student" },
     { label: "Phone", value: me.phone ?? "—" },
     { label: "Member since", value: formatDate(me.created_at) },
     {

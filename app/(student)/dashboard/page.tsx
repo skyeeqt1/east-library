@@ -1,14 +1,28 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ArrowRight, CircleAlert, ClipboardList, History, TriangleAlert } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  CircleAlert,
+  CircleCheck,
+  ClipboardList,
+  History,
+  TriangleAlert,
+} from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
+import { Badge, toneForStatus } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
+import { DashboardLoanCard } from "@/components/student/dashboard-loan-card";
 import {
-  getDueSoonest,
-  manilaToday,
-  type DueSoonest,
+  CountdownChip,
+  countdownFor,
+  withOwedAmount,
+} from "@/components/student/countdown-chip";
+import {
+  getStudentLoans,
+  type StudentLoanRow,
 } from "@/lib/catalog/loans-read";
 import { getBlockingNotices } from "@/lib/catalog/fines-read";
 import { getCurrentProfile } from "@/lib/auth/guards";
@@ -30,8 +44,12 @@ interface FeedRow {
 
 /** Everything the page renders, loaded together (one failed read = error UI). */
 interface DashboardData {
-  /** Hero counters — open loans, due-soon window, earliest due date (Phase 4). */
-  loans: DueSoonest;
+  /** Open loans (ACTIVE + OVERDUE), most urgent first — §6 "My active loans". */
+  openLoans: StudentLoanRow[];
+  /** Exact open-loan count behind the "Books out" hero card. */
+  openTotal: number;
+  /** Newest RETURNED loans — the "Recent activity" section. */
+  returnedLoans: StudentLoanRow[];
   /** Unpaid balance in centavos (R-27 — always computed). */
   balanceCentavos: number;
   /** PENDING requests + APPROVED-but-unreleased requests (the mini feed). */
@@ -40,14 +58,15 @@ interface DashboardData {
   notices: string[];
 }
 
-/** `YYYY-MM-DD` + n days via UTC math (no local-timezone drift). */
-function plusDays(isoDate: string, days: number): string {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  const shifted = new Date(Date.UTC(year, month - 1, day + days));
-  const yy = shifted.getUTCFullYear();
-  const mm = String(shifted.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(shifted.getUTCDate()).padStart(2, "0");
-  return `${yy}-${mm}-${dd}`;
+/** "Oct 15, 2026" for banner due dates (Manila, R-30). */
+const DATE_FORMAT = new Intl.DateTimeFormat("en-PH", {
+  dateStyle: "medium",
+  timeZone: "Asia/Manila",
+});
+
+function formatDate(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : DATE_FORMAT.format(parsed);
 }
 
 /** "Oct 15" for the Due card subtitle ("Next: Oct 15"). */
@@ -67,6 +86,17 @@ function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] ?? fullName;
 }
 
+/** Avatar initials for the greeting banner (decorative — aria-hidden). */
+function initialsOf(fullName: string): string {
+  return fullName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 /** Raw joined row from the mini-feed query (FK embed arrives object-or-array). */
 interface JoinedFeedRow {
   id: string;
@@ -81,54 +111,90 @@ function embedTitle(book: JoinedFeedRow["book"]): string {
   return Array.isArray(book) ? (book[0]?.title ?? "") : book.title;
 }
 
-/** Due-soon / overdue banner copy — design §6 countdown awareness (US-6). */
+/** Due-soon / overdue banner copy — rules.md §11 / §12 (US-6). */
 interface DueBanner {
   tone: "warning" | "error";
   text: string;
 }
 
 /**
- * Student dashboard (US-6 / FR-22, design §6) — greeting banner + due-soon /
- * overdue awareness banner + three hero cards + request mini-feed.
+ * Rules.md §12 notification banners, derived from the most urgent open loan:
  *
- * Loan counters come from `getDueSoonest()` (Phase 4): `activeCount` feeds
- * "Books out", `dueSoonCount` feeds "Due soon" and `nextDueDate` powers both
- * the card subtitle ("Next: Oct 15") and the banner above the cards. The
- * earliest due date doubles as the overdue signal — if it is already in the
- * past, at least one open loan is late (cheap: same single read, no extra
- * query). The balance comes from the computed `student_balances` view
- * (R-27), and the feed mixes PENDING requests with APPROVED requests that
- * have not been released yet (loan_id NULL — awaiting pickup).
+ *   overdue         → red banner + running ₱ balance (the sweep's figure;
+ *                     ₱0.00 on day one is honest — "fines update daily")
+ *   due today / ≤1d → warning banner naming the title and the due date
+ *                     ("Due tomorrow — return {title} by {date} to avoid a fine.")
+ *   otherwise       → no banner
+ */
+function bannerFor(urgent: StudentLoanRow | null, balance: number): DueBanner | null {
+  if (!urgent) return null;
+  const due = formatDate(urgent.due_date);
+
+  if (urgent.days_late !== undefined && urgent.days_late > 0) {
+    return {
+      tone: "error",
+      text:
+        balance > 0
+          ? `Overdue — return ${urgent.title} (due ${due}) now to stop more charges. You owe ${formatPeso(balance)}.`
+          : `Overdue — return ${urgent.title} (due ${due}) now. You owe ${formatPeso(0)} — fines update daily.`,
+    };
+  }
+  if (urgent.days_remaining === 0) {
+    return {
+      tone: "warning",
+      text: `Due today — return ${urgent.title} by ${due} to avoid a fine.`,
+    };
+  }
+  if (urgent.days_remaining === 1) {
+    return {
+      tone: "warning",
+      text: `Due tomorrow — return ${urgent.title} by ${due} to avoid a fine.`,
+    };
+  }
+  return null;
+}
+
+/**
+ * Student dashboard (US-6 / FR-22, design §6) — greeting banner + R-25
+ * blocking notices + due/overdue awareness banner + three hero cards +
+ * "My active loans" countdown cards + pending-request feed + recent activity.
+ *
+ * Loan data comes from `getStudentLoans()` (Phase 4): the open listing feeds
+ * "Books out" (total), the "Due soon" hero countdown (row 0 = earliest due
+ * date, most urgent first) and the "My active loans" cards; the returned
+ * listing feeds "Recent activity". The balance comes from the computed
+ * `student_balances` view (R-27), and the feed mixes PENDING requests with
+ * APPROVED requests that have not been released yet (loan_id NULL — awaiting
+ * pickup).
  */
 export default async function StudentDashboardPage() {
   const me = await getCurrentProfile();
   if (!me) redirect("/login");
 
-  const today = manilaToday();
-  const tomorrow = plusDays(today, 1);
-
   let data: DashboardData | null = null;
   try {
     const supabase = await createClient();
 
-    const [loans, balanceRes, requestsRes] = await Promise.all([
-      getDueSoonest(me.id),
-      // R-27 — computed unpaid balance for this student only.
-      supabase
-        .from("student_balances")
-        .select("balance_centavos")
-        .eq("student_id", me.id)
-        .maybeSingle(),
-      // Mini-feed: PENDING + APPROVED awaiting pickup (released rows dropped
-      // below — their loan exists, so the desk hand-over already happened).
-      supabase
-        .from("loan_requests")
-        .select("id, status, loan_id, created_at, book:books(title)")
-        .eq("student_id", me.id)
-        .in("status", ["PENDING", "APPROVED"])
-        .order("created_at", { ascending: false })
-        .limit(20),
-    ]);
+    const [openListing, returnedListing, balanceRes, requestsRes] =
+      await Promise.all([
+        getStudentLoans(me.id, { page: 1, perPage: 10 }),
+        getStudentLoans(me.id, { status: "RETURNED", page: 1, perPage: 3 }),
+        // R-27 — computed unpaid balance for this student only.
+        supabase
+          .from("student_balances")
+          .select("balance_centavos")
+          .eq("student_id", me.id)
+          .maybeSingle(),
+        // Mini-feed: PENDING + APPROVED awaiting pickup (released rows dropped
+        // below — their loan exists, so the desk hand-over already happened).
+        supabase
+          .from("loan_requests")
+          .select("id, status, loan_id, created_at, book:books(title)")
+          .eq("student_id", me.id)
+          .in("status", ["PENDING", "APPROVED"])
+          .order("created_at", { ascending: false })
+          .limit(20),
+      ]);
     if (requestsRes.error) throw new Error(requestsRes.error.message);
 
     // R-25 blocking banners (Phase 5): best-effort — if this read fails the
@@ -152,7 +218,9 @@ export default async function StudentDashboardPage() {
       }));
 
     data = {
-      loans,
+      openLoans: openListing.rows,
+      openTotal: openListing.total,
+      returnedLoans: returnedListing.rows,
       balanceCentavos:
         (!balanceRes.error && balanceRes.data
           ? (balanceRes.data as { balance_centavos: number }).balance_centavos
@@ -165,26 +233,14 @@ export default async function StudentDashboardPage() {
   }
 
   const balance = data?.balanceCentavos ?? 0;
-  const nextDue = data?.loans.nextDueDate ?? null;
-  const banner: DueBanner | null =
-    nextDue === null
-      ? null
-      : nextDue < today
-        ? {
-            tone: "error",
-            text: "A book is overdue — return it now to avoid accruing more penalties.",
-          }
-        : nextDue === today
-          ? {
-              tone: "error",
-              text: "A book is due today — return it to avoid penalties.",
-            }
-          : nextDue === tomorrow
-            ? {
-                tone: "warning",
-                text: "A book is due tomorrow — return it to avoid penalties.",
-              }
-            : null;
+  const urgent = data?.openLoans[0] ?? null;
+  const banner = data === null ? null : bannerFor(urgent, balance);
+
+  // Hero "Due soon" — the design §6 countdown chip on the most urgent loan.
+  const dueCountdown = urgent
+    ? withOwedAmount(countdownFor(urgent), urgent.fine)
+    : null;
+  const nextDue = urgent?.due_date ?? null;
 
   const identity = [me.student_id, me.course_section]
     .filter((value): value is string => Boolean(value))
@@ -197,14 +253,22 @@ export default async function StudentDashboardPage() {
       user={{ name: me.full_name, id: me.student_id ?? me.role }}
     >
       <div className="flex flex-col gap-6">
-        {/* Greeting banner — design §6 */}
-        <div className="rounded-lg bg-primary-600 bg-linear-to-r from-primary-500 to-primary-700 px-6 py-8 text-white shadow-xs">
-          <p className="text-2xl font-semibold tracking-tight">
-            Hello, {firstName(me.full_name)}!
-          </p>
-          {identity ? (
-            <p className="mt-1 text-sm text-primary-100">{identity}</p>
-          ) : null}
+        {/* Greeting banner — design §6: soft violet gradient + avatar */}
+        <div className="flex items-center justify-between gap-4 rounded-lg bg-primary-600 bg-linear-to-r from-primary-500 to-primary-700 px-6 py-8 text-white shadow-xs">
+          <div className="min-w-0">
+            <p className="text-2xl font-semibold tracking-tight">
+              Hello, {firstName(me.full_name)}!
+            </p>
+            {identity ? (
+              <p className="mt-1 text-sm text-primary-100">{identity}</p>
+            ) : null}
+          </div>
+          <span
+            aria-hidden="true"
+            className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white/20 text-base font-semibold text-white"
+          >
+            {initialsOf(me.full_name)}
+          </span>
         </div>
 
         {data === null ? (
@@ -240,7 +304,8 @@ export default async function StudentDashboardPage() {
               </div>
             ) : null}
 
-            {/* Countdown awareness banner — due within a day / already late */}
+            {/* rules §12: red overdue banner (with running ₱) · warning
+                "due in ≤ 1 day" banner naming the title and due date */}
             {banner ? (
               <div
                 role="status"
@@ -271,14 +336,22 @@ export default async function StudentDashboardPage() {
             >
               <StatCard
                 title="Books out"
-                value={data.loans.activeCount}
+                value={data.openTotal}
                 data={[]}
               />
               <StatCard
                 title="Due soon"
-                value={data.loans.dueSoonCount}
+                value={
+                  dueCountdown ? (
+                    <CountdownChip countdown={dueCountdown} className="text-base" />
+                  ) : (
+                    "—"
+                  )
+                }
                 subtitle={
-                  nextDue ? `Next: ${formatNextDue(nextDue)}` : undefined
+                  nextDue
+                    ? `Next: ${formatNextDue(nextDue)}`
+                    : "No books out right now"
                 }
                 data={[]}
               />
@@ -288,8 +361,67 @@ export default async function StudentDashboardPage() {
                 valueClassName={
                   balance > 0 ? "text-error-700" : "text-success-700"
                 }
+                trailing={
+                  balance > 0 ? undefined : (
+                    <span className="flex items-center gap-1 text-success-700">
+                      <CircleCheck className="size-5" aria-hidden="true" />
+                      <span className="sr-only">All settled</span>
+                    </span>
+                  )
+                }
                 data={[]}
               />
+            </section>
+
+            {/* My active loans — design §6 countdown cards */}
+            <section aria-labelledby="active-loans-heading">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h2
+                  id="active-loans-heading"
+                  className="text-lg font-semibold text-gray-900"
+                >
+                  My active loans
+                </h2>
+                {data.openLoans.length > 0 ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    href="/dashboard/loans"
+                  >
+                    View all
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                  </Button>
+                ) : null}
+              </div>
+
+              {data.openLoans.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-8 text-center">
+                  <span
+                    className="mx-auto flex size-11 items-center justify-center rounded-full bg-white text-primary-500 shadow-xs"
+                    aria-hidden="true"
+                  >
+                    <BookOpen className="size-5" strokeWidth={1.75} />
+                  </span>
+                  <p className="mt-4 text-sm font-semibold text-gray-900">
+                    No books checked out.
+                  </p>
+                  <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">
+                    Browse the catalog and request a title — approved books
+                    appear here with their countdowns.
+                  </p>
+                  <Button size="sm" href="/dashboard/catalog" className="mt-4">
+                    Browse catalog
+                  </Button>
+                </div>
+              ) : (
+                <ul className="flex list-none flex-col gap-4 p-0">
+                  {data.openLoans.slice(0, 5).map((row) => (
+                    <li key={row.id}>
+                      <DashboardLoanCard row={row} />
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
 
             {/* Request mini-feed — pending + approved awaiting pickup */}
@@ -299,7 +431,7 @@ export default async function StudentDashboardPage() {
                   id="requests-heading"
                   className="text-lg font-semibold text-gray-900"
                 >
-                  Requests
+                  Pending requests
                 </h2>
                 <Button variant="secondary" size="sm" href="/dashboard/requests">
                   View all
@@ -364,7 +496,7 @@ export default async function StudentDashboardPage() {
               )}
             </section>
 
-            {/* Recent activity — Phase 5/6 wire real loan history */}
+            {/* Recent activity — newest returns (history tab has the rest) */}
             <section aria-labelledby="recent-activity-heading">
               <h2
                 id="recent-activity-heading"
@@ -372,21 +504,49 @@ export default async function StudentDashboardPage() {
               >
                 Recent activity
               </h2>
-              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-8 text-center">
-                <span
-                  className="mx-auto flex size-11 items-center justify-center rounded-full bg-white text-primary-500 shadow-xs"
-                  aria-hidden="true"
-                >
-                  <History className="size-5" strokeWidth={1.75} />
-                </span>
-                <p className="mt-4 text-sm font-semibold text-gray-900">
-                  No recent activity yet.
-                </p>
-                <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">
-                  Books you borrow and return will appear here with their due
-                  dates.
-                </p>
-              </div>
+              {data.returnedLoans.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-8 text-center">
+                  <span
+                    className="mx-auto flex size-11 items-center justify-center rounded-full bg-white text-primary-500 shadow-xs"
+                    aria-hidden="true"
+                  >
+                    <History className="size-5" strokeWidth={1.75} />
+                  </span>
+                  <p className="mt-4 text-sm font-semibold text-gray-900">
+                    No recent activity yet.
+                  </p>
+                  <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">
+                    Books you borrow and return will appear here with their due
+                    dates.
+                  </p>
+                </div>
+              ) : (
+                <Card padded={false}>
+                  <ul className="divide-y divide-gray-100 p-0">
+                    {data.returnedLoans.map((row) => (
+                      <li
+                        key={row.id}
+                        className="flex items-center justify-between gap-4 px-5 py-4"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-gray-900">
+                            {row.title}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Returned {formatDate(row.returned_at ?? row.released_at)}
+                            {row.condition_on_return === "DAMAGED"
+                              ? " · Condition: Damaged"
+                              : null}
+                          </p>
+                        </div>
+                        <Badge tone={toneForStatus(row.status)}>
+                          {row.status === "RETURNED" ? "Returned" : row.status}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
             </section>
           </>
         )}

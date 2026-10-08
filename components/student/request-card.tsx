@@ -41,6 +41,8 @@ interface Step {
   time: string | null;
   state: StepState;
   detail?: ReactNode;
+  /** Shown in place of the timestamp while a step is still pending. */
+  pending?: string;
 }
 
 /** Circle per step state — tokens only (design §2.1/§6 stepper timeline). */
@@ -80,10 +82,13 @@ function StepDot({ state }: { state: StepState }) {
 }
 
 /**
- * Build the 2-step timeline (design §6: Requested → Reviewed) for one state:
+ * Build the timeline (design §6: Requested → Reviewed → (Released)) for one
+ * state:
  *   ① Requested (created_at, always done)
- *   ② Under review (PENDING) · Approved (APPROVED, decided_at + pickup hint)
+ *   ② Under review (PENDING) · Approved (APPROVED, decided_at)
  *      · Declined (DECLINED, decided_at + reason box) · Cancelled / Expired
+ *   ③ Released (APPROVED only, R-14) — the loan's released_at when the desk
+ *      has handed the book over, otherwise an active "pick up" step.
  */
 function buildSteps(row: StudentRequestRow): Step[] {
   const requested: Step = {
@@ -99,21 +104,35 @@ function buildSteps(row: StudentRequestRow): Step[] {
         requested,
         { key: "review", label: "Under review", time: null, state: "active" },
       ];
-    case "APPROVED":
-      return [
-        requested,
-        {
-          key: "approved",
-          label: "Approved",
-          time: row.decided_at,
-          state: "approved",
-          detail: (
-            <p className="mt-1 text-xs font-medium text-success-700">
-              Pick up the book at the library desk.
-            </p>
-          ),
-        },
-      ];
+    case "APPROVED": {
+      const approved: Step = {
+        key: "approved",
+        label: "Approved",
+        time: row.decided_at,
+        state: "approved",
+      };
+      // Third step — only meaningful for approved requests (design §6).
+      const released: Step = row.released_at
+        ? {
+            key: "released",
+            label: "Released",
+            time: row.released_at,
+            state: "done",
+          }
+        : {
+            key: "released",
+            label: "Released",
+            time: null,
+            state: "active",
+            pending: "Awaiting pickup at the desk",
+            detail: (
+              <p className="mt-1 text-xs font-medium text-warning-700">
+                Pick up the book at the library desk to start your loan.
+              </p>
+            ),
+          };
+      return [requested, approved, released];
+    }
     case "DECLINED":
       return [
         requested,
@@ -153,7 +172,9 @@ function buildSteps(row: StudentRequestRow): Step[] {
 
 /**
  * One request as a stepper card (design §6 — "Vertical stepper timeline per
- * request: Requested → Reviewed with timestamps & decline reason").
+ * request: Requested → Reviewed with timestamps & decline reason", extended
+ * with the Released step from the same mock: approved → released shows when
+ * the desk handed the book over, or the pickup prompt until then).
  *
  * Server component: status, timestamps and the decline reason render here;
  * only the Cancel trigger (pending requests) is a client component.
@@ -196,7 +217,9 @@ export function RequestCard({ row }: { row: StudentRequestRow }) {
                     {step.label}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {time ?? (step.state === "active" ? "Awaiting the library" : "—")}
+                    {time ??
+                      step.pending ??
+                      (step.state === "active" ? "Awaiting the library" : "—")}
                   </p>
                   {step.detail}
                 </div>
