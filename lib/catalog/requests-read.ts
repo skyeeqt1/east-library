@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { settingBool, settingInt } from "@/lib/catalog/settings-read";
 import {
   isRequestStatus,
   type RequestStatus,
@@ -168,26 +169,6 @@ function toStatus(value: unknown): RequestStatus {
   return typeof value === "string" && isRequestStatus(value)
     ? value
     : "PENDING";
-}
-
-/** Settings values arrive as `jsonb` (number | string | boolean). */
-function settingInt(raw: unknown, fallback: number): number {
-  const value =
-    typeof raw === "number"
-      ? raw
-      : typeof raw === "string"
-        ? Number.parseInt(raw, 10)
-        : Number.NaN;
-  return Number.isFinite(value) && value >= 0 ? value : fallback;
-}
-
-function settingBool(raw: unknown, fallback: boolean): boolean {
-  if (typeof raw === "boolean") return raw;
-  if (typeof raw === "string") {
-    if (raw.toLowerCase() === "true") return true;
-    if (raw.toLowerCase() === "false") return false;
-  }
-  return fallback;
 }
 
 /**
