@@ -235,14 +235,9 @@ export default async function AdminDashboardPage({
       navVariant="admin"
       user={{ name: me.full_name, id: me.student_id ?? "LIBRARIAN" }}
       actions={
-        <>
-          <Button variant="secondary" size="md" href="/dashboard">
-            Switch dashboard
-          </Button>
-          {/* CSV download (FR-23) — a plain link, so `next/link` prefetch
-              never fires for a file response. */}
-          <ExportReportButton />
-        </>
+        /* CSV download (FR-23) — a plain link, so `next/link` prefetch
+           never fires for a file response. */
+        <ExportReportButton />
       }
     >
       <div className="flex flex-col gap-6">
