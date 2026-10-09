@@ -147,7 +147,7 @@ async function buildReportCsv(): Promise<string> {
   /* ---- CIRCULATION ------------------------------------------------ */
   csv.section("CIRCULATION");
   csv.row("Metric", "Value");
-  csv.row("Active loans", circulation.stats.activeLoans);
+  csv.row("Books out", circulation.stats.activeLoans);
   csv.row("Overdue now", circulation.stats.overdueNow);
   csv.row("Returned this month", circulation.stats.returnedThisMonth);
   csv.row("Requests this month", circulation.stats.requestsThisMonth);
@@ -155,15 +155,15 @@ async function buildReportCsv(): Promise<string> {
   csv.row("Requests approved this month", circulation.stats.requestsApprovedThisMonth);
 
   csv.blank();
-  csv.row("Loans over time (Manila days)");
-  csv.row("Date", "Loans released");
+  csv.row("Borrowing over time (Manila days)");
+  csv.row("Date", "Books released");
   for (const day of circulation.releaseTrend) {
     csv.row(day.date, day.count);
   }
 
   csv.blank();
   csv.row("Top borrowed books");
-  csv.row("Rank", "Title", "Author", "Loans");
+  csv.row("Rank", "Title", "Author", "Borrows");
   for (const row of circulation.topBorrowed) {
     csv.row(row.rank, row.title, row.author, row.borrow_count);
   }

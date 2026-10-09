@@ -266,7 +266,7 @@ export function StudentRowActions({ student }: { student: StudentRowActionsStude
         title={blocking ? "Block account" : "Unblock account"}
         description={
           blocking
-            ? `${student.fullName} will not be able to sign in until unblocked. Existing loans are unaffected (R-26).`
+            ? `${student.fullName} will not be able to sign in until unblocked. Books already borrowed are unaffected (R-26).`
             : `${student.fullName} will be able to sign in again.`
         }
         footer={

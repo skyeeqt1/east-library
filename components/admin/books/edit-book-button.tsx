@@ -52,7 +52,7 @@ const COPY_STATUS_TONES: Record<CopyStatus, BadgeTone> = {
 
 const STATUS_LABEL: Record<CopyStatus, string> = {
   AVAILABLE: "Available",
-  ON_LOAN: "On loan",
+  ON_LOAN: "Borrowed out",
   DAMAGED: "Damaged",
   LOST: "Lost",
 };
@@ -452,7 +452,7 @@ export function EditBookButton({ book }: { book: EditableBook }) {
                       <select
                         value={copy.status}
                         disabled={onLoan || copyBusy !== null}
-                        title={onLoan ? "Managed by the loan flow" : undefined}
+                        title={onLoan ? "Managed automatically while the book is out" : undefined}
                         aria-label={`Status for copy ${copy.barcode ?? copy.id}`}
                         onChange={(event) =>
                           handleStatusChange(
@@ -463,7 +463,7 @@ export function EditBookButton({ book }: { book: EditableBook }) {
                         className="h-10 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-700 transition-shadow duration-fast ease-standard focus:border-primary-500 focus:outline-none focus:shadow-focus disabled:pointer-events-none disabled:opacity-50"
                       >
                         {onLoan ? (
-                          <option value="ON_LOAN">On loan</option>
+                          <option value="ON_LOAN">Borrowed out</option>
                         ) : null}
                         {MANUAL_STATUSES.map((status) => (
                           <option key={status} value={status}>
@@ -473,7 +473,7 @@ export function EditBookButton({ book }: { book: EditableBook }) {
                       </select>
                       {onLoan ? (
                         <span className="sr-only">
-                          Status is managed by the loan flow.
+                          Status is managed automatically while the book is out.
                         </span>
                       ) : null}
                     </div>

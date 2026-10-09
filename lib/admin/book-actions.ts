@@ -382,7 +382,10 @@ export async function setCopyStatus(
   const { adminId } = await assertAdmin();
 
   if (status === "ON_LOAN") {
-    return { ok: false, error: "Copy status is managed by the loan flow." };
+    return {
+      ok: false,
+      error: "Copy status is managed automatically while the book is out.",
+    };
   }
   if (!(MANUAL_COPY_STATUSES as readonly string[]).includes(status)) {
     return { ok: false, error: "Invalid copy status." };

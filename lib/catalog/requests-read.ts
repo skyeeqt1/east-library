@@ -124,7 +124,7 @@ export const REQUEST_MESSAGES = {
   requestLimit: "Request limit reached.",
   /** R-09.5 — active loans >= settings.max_active_loans (see report: SQL
    *  `assert_can_request` wrongly reuses 'Request limit reached.' here). */
-  loanLimit: "Loan limit reached.",
+  loanLimit: "Borrow limit reached.",
   /** R-09.6 — book has no AVAILABLE copy right now. */
   noCopies: "No copies available.",
   /** R-09.1 / R-04 — profile.status = 'BLOCKED'. */

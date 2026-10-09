@@ -234,7 +234,7 @@ export function ReleaseBookButton({ request }: { request: ReleasableRequest }) {
                 })}
               </div>
               <p className="mt-2 text-xs text-gray-500">
-                The chosen copy flips to ON_LOAN and the loan is due in 7 days
+                The chosen copy flips to Borrowed out and is due back in 7 days
                 (R-14 — due date computed in SQL).
               </p>
             </fieldset>

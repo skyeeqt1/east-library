@@ -26,7 +26,7 @@ export function LoansTabs({ status }: { status: LoansStatusFilter }) {
 
   return (
     <Tabs
-      aria-label="Filter loans by status"
+      aria-label="Filter borrowed books by status"
       activeId={status}
       onChange={(id) => {
         router.replace(buildLoansPath({ status: id as LoansStatusFilter, page: 1 }));
@@ -65,7 +65,7 @@ export function LoansSearch({ q, status }: LoansSearchProps) {
   return (
     <form
       role="search"
-      aria-label="Search loans"
+      aria-label="Search borrowed books"
       onSubmit={handleSearch}
       className="w-full lg:max-w-sm"
     >
@@ -75,12 +75,12 @@ export function LoansSearch({ q, status }: LoansSearchProps) {
         type="search"
         defaultValue={q}
         placeholder="Search student, ID, barcode, title or author…"
-        aria-label="Search loans"
+        aria-label="Search borrowed books"
         autoComplete="off"
         trailing={
           <button
             type="submit"
-            aria-label="Submit loan search"
+            aria-label="Submit search"
             className="flex size-9 items-center justify-center rounded-md text-gray-500 transition-colors duration-fast hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
           >
             <Search className="size-4" aria-hidden="true" />

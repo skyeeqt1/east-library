@@ -25,7 +25,7 @@ export function LoanStatusTabs({
 
   return (
     <Tabs
-      aria-label="Filter my loans by status"
+      aria-label="Filter my borrowed books by status"
       activeId={status}
       onChange={(id) => go(id as StudentLoansFilter)}
       tabs={[

@@ -217,7 +217,7 @@ export function ActivityTable({ rows, footer, empty }: ActivityTableProps) {
                         ? "requests"
                         : row.kind === "FINE"
                           ? "penalties"
-                          : "loans"
+                          : "borrowed books"
                     }`}
                     className="flex size-9 items-center justify-center rounded-md text-gray-500 transition-colors duration-fast hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
                   >

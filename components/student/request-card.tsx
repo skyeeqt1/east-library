@@ -127,7 +127,7 @@ function buildSteps(row: StudentRequestRow): Step[] {
             pending: "Awaiting pickup at the desk",
             detail: (
               <p className="mt-1 text-xs font-medium text-warning-700">
-                Pick up the book at the library desk to start your loan.
+                Pick up the book at the library desk to check it out.
               </p>
             ),
           };

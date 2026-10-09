@@ -33,7 +33,7 @@ export const NAV_ITEMS: Record<NavVariant, NavItem[]> = {
   admin: [
     { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/requests", label: "Requests", icon: ClipboardList },
-    { href: "/admin/loans", label: "Loans", icon: ArrowLeftRight },
+    { href: "/admin/loans", label: "Borrowed", icon: ArrowLeftRight },
     { href: "/admin/books", label: "Books", icon: Library },
     { href: "/admin/students", label: "Students", icon: Users },
     { href: "/admin/penalties", label: "Penalties", icon: Receipt },
@@ -45,7 +45,7 @@ export const NAV_ITEMS: Record<NavVariant, NavItem[]> = {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard/catalog", label: "Browse Catalog", icon: Search },
     { href: "/dashboard/requests", label: "My Requests", icon: ClipboardList },
-    { href: "/dashboard/loans", label: "My Loans", icon: BookOpen },
+    { href: "/dashboard/loans", label: "My Borrowed Books", icon: BookOpen },
     { href: "/dashboard/penalties", label: "My Penalties", icon: Receipt },
     { href: "/dashboard/profile", label: "Profile", icon: UserRound },
   ],

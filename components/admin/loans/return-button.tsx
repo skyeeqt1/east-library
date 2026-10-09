@@ -140,7 +140,7 @@ export function ReturnButton({ loan }: { loan: ReturnableLoan }) {
       <Modal
         open={open}
         onClose={handleClose}
-        title={result ? "Loan returned" : "Mark returned"}
+        title={result ? "Book returned" : "Mark returned"}
         description={
           result
             ? `${loan.title} — ${loan.student_name}`
