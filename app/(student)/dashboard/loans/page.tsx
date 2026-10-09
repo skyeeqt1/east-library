@@ -136,7 +136,7 @@ export default async function StudentLoansPage({
               </Button>
             ) : (
               <Button size="md" href="/dashboard/catalog" className="mt-4">
-                Browse catalog
+                Browse books
               </Button>
             )}
           </div>

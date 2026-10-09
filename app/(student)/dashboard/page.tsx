@@ -404,7 +404,7 @@ export default async function StudentDashboardPage() {
                     appear here with their countdowns.
                   </p>
                   <Button size="sm" href="/dashboard/catalog" className="mt-4">
-                    Browse catalog
+                    Browse books
                   </Button>
                 </div>
               ) : (
@@ -443,7 +443,7 @@ export default async function StudentDashboardPage() {
                     the library&apos;s approval.
                   </p>
                   <Button size="sm" href="/dashboard/catalog" className="mt-4">
-                    Browse catalog
+                    Browse books
                   </Button>
                 </div>
               ) : (

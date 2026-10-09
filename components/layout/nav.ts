@@ -43,7 +43,7 @@ export const NAV_ITEMS: Record<NavVariant, NavItem[]> = {
   ],
   student: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/dashboard/catalog", label: "Browse Catalog", icon: Search },
+    { href: "/dashboard/catalog", label: "Browse Books", icon: Search },
     { href: "/dashboard/requests", label: "My Requests", icon: ClipboardList },
     { href: "/dashboard/loans", label: "My Borrowed Books", icon: BookOpen },
     { href: "/dashboard/penalties", label: "My Penalties", icon: Receipt },

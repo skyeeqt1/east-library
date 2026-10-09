@@ -124,7 +124,7 @@ export default async function StudentRequestsPage({
               </Button>
             ) : status === "all" ? (
               <Button size="md" href="/dashboard/catalog" className="mt-4">
-                Browse catalog
+                Browse books
               </Button>
             ) : (
               <Button

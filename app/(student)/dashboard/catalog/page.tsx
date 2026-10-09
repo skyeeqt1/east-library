@@ -21,7 +21,7 @@ import { getBlockingNotices } from "@/lib/catalog/fines-read";
 import { getCurrentProfile } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Browse Catalog" };
+export const metadata: Metadata = { title: "Browse Books" };
 
 /** Session cookie + searchParams are read per request — blocking route. */
 export const instant = false;
@@ -45,7 +45,7 @@ interface LoadedCatalog {
 }
 
 /**
- * Student → Browse Catalog (US-2, US-7, design §6 — the prime student screen).
+ * Student → Browse Books (US-2, US-7, design §6 — the prime student screen).
  *
  * Server component reading `searchParams` (q, category, page). Renders for
  * any signed-in profile (admins may preview via "Switch dashboard"), but the
@@ -142,7 +142,7 @@ export default async function StudentCatalogPage({
 
   return (
     <AppShell
-      title="Browse Catalog"
+      title="Browse Books"
       subtitle="Find a title and send a borrow request — the library approves at the desk."
       navVariant="student"
       user={{ name: me.full_name, id: me.student_id ?? me.role }}

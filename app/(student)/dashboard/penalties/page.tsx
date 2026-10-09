@@ -144,7 +144,7 @@ export default async function StudentPenaltiesPage({
           body: "Any charge the library records shows up here until it is paid at the desk.",
           action: (
             <Button variant="secondary" size="md" href="/dashboard/catalog">
-              Browse catalog
+              Browse books
             </Button>
           ) as ReactNode,
         };
