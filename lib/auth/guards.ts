@@ -17,15 +17,16 @@ import { parseProfileRow, type ProfileRow } from "@/lib/auth/types";
 export async function getCurrentProfile(): Promise<ProfileRow | null> {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  // Local JWT verification (cached JWKS) instead of getUser()'s per-request
+  // network round-trip — the profiles read below is the authoritative check.
+  const { data: claimData } = await supabase.auth.getClaims();
+  const userId = claimData?.claims?.sub;
+  if (!userId) return null;
 
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", user.id)
+    .eq("id", userId)
     .maybeSingle();
 
   if (error) return null;
@@ -49,18 +50,19 @@ export interface AdminContext {
 export async function assertAdmin(): Promise<AdminContext> {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  // Local JWT verification (see getCurrentProfile). The fresh profiles read
+  // below stays: it is the authoritative admin gate (R-03, R-31).
+  const { data: claimData } = await supabase.auth.getClaims();
+  const userId = claimData?.claims?.sub;
+  if (!userId) redirect("/login");
 
   const { data, error } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", user.id)
+    .eq("id", userId)
     .maybeSingle();
 
   if (error || data?.role !== "ADMIN") redirect("/dashboard");
 
-  return { adminId: user.id };
+  return { adminId: userId };
 }

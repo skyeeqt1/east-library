@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LogOut, Search } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, type NavVariant } from "@/components/layout/nav";
@@ -37,7 +37,7 @@ function initialsOf(name: string): string {
 
 /**
  * Sidebar — design §3: 264px fixed white surface, right border,
- * logo area, visual search box, icon nav, bottom user card.
+ * logo area, icon nav, bottom user card.
  * Active item = gray-100 pill with a primary-500 icon.
  * The positioning wrapper (fixed desktop / drawer) lives in AppShell.
  */
@@ -65,6 +65,7 @@ export function AppSidebar({
           width={36}
           height={36}
           className="size-9 shrink-0"
+          priority
         />
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-base font-semibold tracking-tight text-gray-900">
@@ -72,14 +73,6 @@ export function AppSidebar({
           </span>
           <span className="truncate text-xs text-gray-500">Library</span>
         </span>
-      </div>
-
-      {/* Search box — visual only in Phase 0 (⌘K search lands in Phase 6/7) */}
-      <div className="px-4 pb-4" aria-hidden="true">
-        <div className="flex h-10 items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-500">
-          <Search className="size-4 shrink-0" strokeWidth={1.75} />
-          <span className="truncate">Search…</span>
-        </div>
       </div>
 
       {/* Navigation */}

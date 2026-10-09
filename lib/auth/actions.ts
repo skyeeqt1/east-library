@@ -1,8 +1,15 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { parseProfileRow } from "@/lib/auth/types";
+import {
+  checkRateLimit,
+  clearRateLimit,
+  failRateLimit,
+  formatRetryAfter,
+} from "@/lib/rate-limit";
 import {
   changePasswordSchema,
   fieldErrorsFromZod,
@@ -16,6 +23,22 @@ const GENERIC_LOGIN_ERROR =
 /** R-04: blocked accounts are rejected with a clear, non-generic message. */
 const BLOCKED_LOGIN_ERROR =
   "This account has been blocked. Contact the library.";
+
+/** Brute-force guard: failed attempts per identifier / per IP. */
+const LOGIN_ID_MAX_FAILS = 8;
+const LOGIN_IP_MAX_FAILS = 40;
+const LOGIN_WINDOW_MS = 5 * 60 * 1000;
+
+/** Failed current-password tries per user before change-password locks. */
+const PASSWORD_MAX_FAILS = 5;
+
+/** Best-effort client IP for the per-IP bucket (school NAT → generous cap). */
+async function clientIp(): Promise<string> {
+  const h = await headers();
+  const fwd = h.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]!.trim();
+  return h.get("x-real-ip") ?? "local";
+}
 
 /** Synthetic auth-email domain for Student IDs (architecture.md §4, R-02). */
 const STUDENT_EMAIL_DOMAIN = "@escr.students";
@@ -73,6 +96,20 @@ export async function login(
     return { fieldErrors: fieldErrorsFromZod(parsed.error) };
   }
 
+  const identifier = parsed.data.identifier.trim().toLowerCase();
+  const idKey = `login:id:${identifier}`;
+  const ipKey = `login:ip:${await clientIp()}`;
+
+  // Rate limiting: refuse before touching Supabase when a bucket is full.
+  for (const key of [idKey, ipKey]) {
+    const gate = checkRateLimit(key, key === idKey ? LOGIN_ID_MAX_FAILS : LOGIN_IP_MAX_FAILS, LOGIN_WINDOW_MS);
+    if (!gate.ok) {
+      return {
+        error: `Too many failed attempts. Please try again in ${formatRetryAfter(gate.retryAfterSec)}.`,
+      };
+    }
+  }
+
   const supabase = await createClient();
   const candidates = candidateEmails(parsed.data.identifier);
 
@@ -89,8 +126,13 @@ export async function login(
   }
 
   if (!signedIn) {
+    failRateLimit(idKey, LOGIN_ID_MAX_FAILS, LOGIN_WINDOW_MS);
+    failRateLimit(ipKey, LOGIN_IP_MAX_FAILS, LOGIN_WINDOW_MS);
     return { error: GENERIC_LOGIN_ERROR };
   }
+
+  // Success — reset the identifier bucket (a real human just proved they own it).
+  clearRateLimit(idKey);
 
   // Session cookie is set — now enforce the account state and the role route.
   const {
@@ -174,14 +216,25 @@ export async function changePassword(
 
     if (!user?.email) redirect("/login");
 
+    // Brute-force guard on the current-password check.
+    const pwKey = `pw:${user.id}`;
+    const gate = checkRateLimit(pwKey, PASSWORD_MAX_FAILS, LOGIN_WINDOW_MS);
+    if (!gate.ok) {
+      return {
+        error: `Too many failed attempts. Please try again in ${formatRetryAfter(gate.retryAfterSec)}.`,
+      };
+    }
+
     // 1) Re-authenticate with the current password.
     const { error: reauthError } = await supabase.auth.signInWithPassword({
       email: user.email,
       password: parsed.data.currentPassword,
     });
     if (reauthError) {
+      failRateLimit(pwKey, PASSWORD_MAX_FAILS, LOGIN_WINDOW_MS);
       return { fieldErrors: { currentPassword: "Current password is incorrect." } };
     }
+    clearRateLimit(pwKey);
 
     // 2) Apply the new password.
     const { error: updateError } = await supabase.auth.updateUser({
