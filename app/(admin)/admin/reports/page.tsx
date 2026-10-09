@@ -110,7 +110,7 @@ function CirculationView({ report }: { report: CirculationReport }) {
   const notes: string[] = [];
   if (truncated.loans) {
     notes.push(
-      "Only the most recent 2,000 loans feed the trend, rankings and returns below — the stat cards stay exact.",
+      "Only the most recent 2,000 circulation records feed the trend, rankings and returns below — the stat cards stay exact.",
     );
   }
   if (truncated.requests) {
@@ -127,7 +127,7 @@ function CirculationView({ report }: { report: CirculationReport }) {
         className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4"
       >
         <StatCard
-          title="Active loans"
+          title="Books out"
           subtitle="Open right now (ACTIVE + OVERDUE)"
           value={stats.activeLoans}
           data={activeTrend}
@@ -159,16 +159,16 @@ function CirculationView({ report }: { report: CirculationReport }) {
 
       <ReportSection
         id="loans-over-time"
-        title="Loans over time"
+        title="Borrowing over time"
         description={`Books released per day · last ${REPORT_TREND_DAYS} Manila days (${formatDayLabel(windowFrom)} – ${formatDayLabel(windowTo)}, R-30)`}
       >
         {releaseTotal === 0 ? (
           <ReportEmptyState
             icon={Activity}
-            title={hasAnyLoanActivity ? `No releases in the last ${REPORT_TREND_DAYS} days.` : "No loans yet."}
+            title={hasAnyLoanActivity ? `No releases in the last ${REPORT_TREND_DAYS} days.` : "No books borrowed yet."}
             body={
               hasAnyLoanActivity
-                ? "Open loans are still counted in the cards above; new releases appear here as a daily trend."
+                ? "Books out are still counted in the cards above; new releases appear here as a daily trend."
                 : "The daily trend starts moving the moment a book is released to a student."
             }
           />
@@ -189,12 +189,12 @@ function CirculationView({ report }: { report: CirculationReport }) {
       <ReportSection
         id="top-borrowed"
         title="Top borrowed books"
-        description="Most-borrowed titles by loan count (top 10)"
+        description="Most-borrowed titles by borrow count (top 10)"
       >
         {topBorrowed.length === 0 ? (
           <ReportEmptyState
             icon={BookOpen}
-            title="No loans recorded yet."
+            title="No borrow history yet."
             body="The most-borrowed titles appear here as soon as books start circulating."
           />
         ) : (
@@ -202,7 +202,7 @@ function CirculationView({ report }: { report: CirculationReport }) {
             <TableHead>
               <Th className="w-20">Rank</Th>
               <Th>Title</Th>
-              <Th className="w-32 text-right">Loans</Th>
+              <Th className="w-32 text-right">Borrows</Th>
             </TableHead>
             <TableBody>
               {topBorrowed.map((row) => (
@@ -226,13 +226,13 @@ function CirculationView({ report }: { report: CirculationReport }) {
       <ReportSection
         id="recent-returns"
         title="Recent returns"
-        description="The last 10 finished loans — who brought what back, and how it came back"
+        description="The last 10 returns — who brought what back, and how it came back"
       >
         {recentReturns.length === 0 ? (
           <ReportEmptyState
             icon={History}
             title="No returns recorded yet."
-            body="Finished loans appear here with their return date, condition and days late."
+            body="Returned books appear here with their return date, condition and days late."
           />
         ) : (
           <Table minWidth={960}>
@@ -568,18 +568,22 @@ export default async function AdminReportsPage({
 
   const { tab } = parseReportsQuery(await searchParams);
 
-  const me = await getCurrentProfile();
+  // The profile read and the active tab's report don't depend on each other,
+  // so they overlap in one wave; the session gate below still fires before
+  // rendering.
+  const [me, data] = await Promise.all([
+    getCurrentProfile(),
+    (async (): Promise<LoadedReport | null> => {
+      try {
+        return tab === "circulation"
+          ? { tab, report: await getCirculationReport() }
+          : { tab, report: await getCollectionsReport() };
+      } catch {
+        return null; // surface a readable error instead of an empty report
+      }
+    })(),
+  ]);
   if (!me) redirect("/login");
-
-  let data: LoadedReport | null = null;
-  try {
-    data =
-      tab === "circulation"
-        ? { tab, report: await getCirculationReport() }
-        : { tab, report: await getCollectionsReport() };
-  } catch {
-    data = null; // surface a readable error instead of an empty report
-  }
 
   return (
     <AppShell
@@ -594,7 +598,8 @@ export default async function AdminReportsPage({
         </>
       }
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         {/* Tab row under the header (design §5.1) — switches URL state */}
         <ReportsTabs tab={tab} />
 

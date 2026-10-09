@@ -33,7 +33,7 @@ import { getCurrentProfile } from "@/lib/auth/guards";
 import { formatRelativeTime } from "@/lib/utils";
 import type { LoanStatus } from "@/lib/validations/loan";
 
-export const metadata: Metadata = { title: "Loans & Returns" };
+export const metadata: Metadata = { title: "Borrowed Books" };
 
 /** Session cookie + searchParams are read per request — blocking route. */
 export const instant = false;
@@ -100,24 +100,28 @@ export default async function AdminLoansPage({
 
   const { status, q, page } = parseLoansQuery(await searchParams);
 
-  const me = await getCurrentProfile();
+  // The profile read and the data reads don't depend on each other, so they
+  // overlap in one wave; the session gate below still fires before rendering.
+  const [me, data] = await Promise.all([
+    getCurrentProfile(),
+    (async (): Promise<LoadedLoans | null> => {
+      try {
+        const [counts, loans] = await Promise.all([
+          getLoanCounts(),
+          getAdminActiveLoans({
+            status,
+            q: q || undefined,
+            page,
+            perPage: LOANS_PER_PAGE,
+          }),
+        ]);
+        return { counts, loans };
+      } catch {
+        return null; // surface a readable error instead of an empty table
+      }
+    })(),
+  ]);
   if (!me) redirect("/login");
-
-  let data: LoadedLoans | null = null;
-  try {
-    const [counts, loans] = await Promise.all([
-      getLoanCounts(),
-      getAdminActiveLoans({
-        status,
-        q: q || undefined,
-        page,
-        perPage: LOANS_PER_PAGE,
-      }),
-    ]);
-    data = { counts, loans };
-  } catch {
-    data = null; // surface a readable error instead of an empty table
-  }
 
   const rows = data?.loans.rows ?? [];
   const total = data?.loans.total ?? 0;
@@ -128,43 +132,44 @@ export default async function AdminLoansPage({
   const emptyCopy = onCurrentPage
     ? {
         title: "Nothing on this page.",
-        body: "Return to the first page to see the remaining loans.",
+        body: "Return to the first page to see the rest.",
       }
     : filtering
       ? {
-          title: "No loans match your search.",
+          title: "No borrowed books match your search.",
           body: "Try a student name or number, a copy barcode, or a book title.",
         }
       : status === "ACTIVE"
         ? {
-            title: "No active loans.",
+            title: "No books out right now.",
             body: "Books released at the desk appear here until they are returned.",
           }
         : status === "OVERDUE"
           ? {
               title: "Nothing overdue — great job!",
-              body: "Loans that pass their due date show up here automatically.",
+              body: "Books that pass their due date show up here automatically.",
             }
           : {
-              title: "No returned loans yet.",
-              body: "Finished loans are archived here with their return details.",
+              title: "No returned books yet.",
+              body: "Returned books are archived here with their return details.",
             };
 
   return (
     <AppShell
-      title="Loans & Returns"
-      subtitle="Seven-day loans, desk returns and overdue counts (R-17 — due = release + 7 days)."
+      title="Borrowed Books"
+      subtitle="Books out for seven days, desk returns and overdue counts (R-17 — due = release + 7 days)."
       navVariant="admin"
       user={{ name: me.full_name, id: me.student_id ?? "LIBRARIAN" }}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         {data === null ? (
           <div
             role="alert"
             className="rounded-lg border border-error-500 bg-error-25 px-6 py-10 text-center"
           >
             <p className="text-sm font-medium text-error-700">
-              Could not load loans.
+              Could not load borrowed books.
             </p>
             <p className="mt-1 text-sm text-error-700">
               Please try again in a moment.
@@ -177,7 +182,7 @@ export default async function AdminLoansPage({
 
             {/* Five live counters (design §4.2 grid: 1 → 2 → 5) */}
             <section
-              aria-label="Loan metrics"
+              aria-label="Circulation metrics"
               className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5"
             >
               <StatCard title="Active" value={data.counts.active} data={[]} />

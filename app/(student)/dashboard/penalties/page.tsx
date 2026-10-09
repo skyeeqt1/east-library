@@ -156,7 +156,8 @@ export default async function StudentPenaltiesPage({
       navVariant="student"
       user={{ name: me.full_name, id: me.student_id ?? me.role }}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         {/* Balance hero — R-27 computed figure, never cached */}
         <Card aria-labelledby="balance-heading">
           <div className="flex flex-wrap items-start justify-between gap-6">
@@ -169,8 +170,7 @@ export default async function StudentPenaltiesPage({
               </h2>
               <p
                 className={cn(
-                  "mt-2 text-4xl font-semibold tracking-tight",
-                  balance > 0 ? "text-error-700" : "text-success-700",
+                  "mt-2 text-4xl font-semibold tracking-tight text-error-700",
                 )}
               >
                 {formatPeso(balance)}

@@ -61,11 +61,11 @@ const TAB_COPY: Record<
   },
   overdue: {
     label: "overdue activity",
-    body: "Loans that pass their due date show up here automatically.",
+    body: "Books that pass their due date show up here automatically.",
   },
   returns: {
     label: "returns",
-    body: "Finished loans are archived here with their return details.",
+    body: "Returned books are archived here with their return details.",
   },
   fines: {
     label: "fines",
@@ -73,12 +73,12 @@ const TAB_COPY: Record<
   },
 };
 
-/** Pill noun for empty-state copy — "active" → "active loans". */
+/** Pill noun for empty-state copy — "active" → "checked-out books". */
 const STATUS_COPY: Record<Exclude<ActivityStatus, "all">, string> = {
   pending: "pending requests",
-  active: "active loans",
-  overdue: "overdue loans",
-  returned: "returned loans",
+  active: "checked-out books",
+  overdue: "overdue books",
+  returned: "returned books",
   unpaid: "unpaid fines",
 };
 
@@ -196,26 +196,30 @@ export default async function AdminDashboardPage({
 
   const { tab, status, q, page } = parseDashboardQuery(await searchParams);
 
-  const me = await getCurrentProfile();
+  // The profile read and the data reads don't depend on each other, so they
+  // overlap in one wave; the session gate below still fires before rendering.
+  const [me, data] = await Promise.all([
+    getCurrentProfile(),
+    (async (): Promise<LoadedDashboard | null> => {
+      try {
+        const [counts, activity, stats] = await Promise.all([
+          getAdminActivityCounts(),
+          getAdminActivity({
+            tab,
+            q: q || undefined,
+            status,
+            page,
+            perPage: DASHBOARD_PER_PAGE,
+          }),
+          getAdminDashboardStats(),
+        ]);
+        return { counts, activity, stats };
+      } catch {
+        return null; // surface a readable error instead of an empty table
+      }
+    })(),
+  ]);
   if (!me) redirect("/login");
-
-  let data: LoadedDashboard | null = null;
-  try {
-    const [counts, activity, stats] = await Promise.all([
-      getAdminActivityCounts(),
-      getAdminActivity({
-        tab,
-        q: q || undefined,
-        status,
-        page,
-        perPage: DASHBOARD_PER_PAGE,
-      }),
-      getAdminDashboardStats(),
-    ]);
-    data = { counts, activity, stats };
-  } catch {
-    data = null; // surface a readable error instead of an empty table
-  }
 
   const rows = data?.activity.rows ?? [];
   const total = data?.activity.total ?? 0;
@@ -240,7 +244,8 @@ export default async function AdminDashboardPage({
         <ExportReportButton />
       }
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         {data === null ? (
           <div
             role="alert"
@@ -256,7 +261,9 @@ export default async function AdminDashboardPage({
         ) : (
           <>
             {/* Tab row with live counts (design §5.1) */}
-            <DashboardTabs tab={tab} counts={data.counts} q={q} />
+            <div>
+              <DashboardTabs tab={tab} counts={data.counts} q={q} />
+            </div>
 
             {/* Three stat cards with deltas + 14-day sparklines (design §5.2) */}
             <section
@@ -270,7 +277,7 @@ export default async function AdminDashboardPage({
                 data={data.stats.trends.totalBooks}
               />
               <StatCard
-                title="Active loans"
+                title="Books out"
                 value={data.stats.activeLoans}
                 delta={data.stats.deltas.activeLoans}
                 data={data.stats.trends.activeLoans}

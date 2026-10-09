@@ -5,7 +5,6 @@ import {
   ArrowRight,
   BookOpen,
   CircleAlert,
-  CircleCheck,
   ClipboardList,
   History,
   TriangleAlert,
@@ -256,7 +255,8 @@ export default async function StudentDashboardPage() {
       navVariant="student"
       user={{ name: me.full_name, id: me.student_id ?? me.role }}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         {/* Greeting banner — design §6: soft violet gradient + avatar */}
         <div className="flex items-center justify-between gap-4 rounded-lg bg-primary-600 bg-linear-to-r from-primary-500 to-primary-700 px-6 py-8 text-white shadow-xs">
           <div className="min-w-0">
@@ -362,17 +362,7 @@ export default async function StudentDashboardPage() {
               <StatCard
                 title="Balance ₱"
                 value={formatPeso(balance)}
-                valueClassName={
-                  balance > 0 ? "text-error-700" : "text-success-700"
-                }
-                trailing={
-                  balance > 0 ? undefined : (
-                    <span className="flex items-center gap-1 text-success-700">
-                      <CircleCheck className="size-5" aria-hidden="true" />
-                      <span className="sr-only">All settled</span>
-                    </span>
-                  )
-                }
+                valueClassName="text-error-700"
                 data={[]}
               />
             </section>
@@ -384,7 +374,7 @@ export default async function StudentDashboardPage() {
                   id="active-loans-heading"
                   className="text-lg font-semibold text-gray-900"
                 >
-                  My active loans
+                  My borrowed books
                 </h2>
                 {data.openLoans.length > 0 ? (
                   <Button

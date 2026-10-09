@@ -10,7 +10,7 @@ sparklines, tab pills, paginated data table — see project reference image).
 
 1. **Consistency over novelty** — one token set, one component library, zero one-off styles.
 2. **Data-dense for admins, calm and friendly for students** — same DNA, different density.
-3. **Clarity of state** — every request/loan/fine always shows a color-coded status.
+3. **Clarity of state** — every request/borrow/fine always shows a color-coded status.
 4. **Accessible by default** — WCAG 2.1 AA (4.5:1 text contrast) baked into tokens.
 5. **Mobile-first** — usable on a school lab desktop *and* a student's phone.
 
@@ -22,14 +22,21 @@ sparklines, tab pills, paginated data table — see project reference image).
 
 ```css
 :root {
-  /* Brand / Primary (Untitled UI Violet) */
-  --primary-25:  #F9F5FF;
-  --primary-50:  #F4EBFF;
-  --primary-100: #E9D7FE;
-  --primary-300: #B692F6;
-  --primary-500: #7F56D9;   /* buttons, active nav, chart lines */
-  --primary-600: #6941C6;   /* hover */
-  --primary-700: #53389E;   /* active */
+  /* Brand / Primary (ESCR seal red — sampled from logo.png, the school seal)
+     White on primary-500 = 5.4:1, white on primary-600 = 6.6:1 (AA ✓) */
+  --primary-25:  #FEF4F4;
+  --primary-50:  #FDE8E8;
+  --primary-100: #FBD2D2;
+  --primary-300: #F19999;
+  --primary-500: #D32020;   /* buttons, active nav, chart lines */
+  --primary-600: #B71C1C;   /* hover */
+  --primary-700: #9E1616;   /* active */
+
+  /* Accent (ESCR seal gold — decorative only: rules, marks, graphics.
+     Never carries text — 1.2:1 on white.) */
+  --gold-400: #F5D90A;
+  --gold-500: #E0B400;
+  --gold-700: #9E7A00;
 
   /* Neutrals */
   --gray-25:  #FCFCFD;
@@ -55,7 +62,7 @@ sparklines, tab pills, paginated data table — see project reference image).
 |---|---|---|
 | Pending / Requested | `warning` | 🟠 orange pill |
 | Approved | `info` | 🔵 blue pill |
-| Active loan | `primary` | 🟣 violet pill |
+| Borrowed out / Active | `primary` | 🔴 seal-red pill |
 | Returned / Paid | `success` | 🟢 green pill |
 | Overdue / Unpaid fine | `error` | 🔴 red pill |
 | Declined / Blocked / Damaged | `gray-700` | ⚫ gray pill |
@@ -104,6 +111,37 @@ Card padding = 24px. Grid gutter = 24px.
 /* All motion wrapped in @media (prefers-reduced-motion: reduce) */
 ```
 
+**Motion behaviors (app/template.tsx + app/layout.tsx + globals.css):**
+
+| Trigger | Animation |
+|---|---|
+| Page open (full load or reload) and page switch (sidebar / path navigation) | Landing cascade — **every content block** of the page fades up **top to bottom**, one beat every 50ms (max 16 beats), 320ms per block; the wipe is suppressed while the cascade runs. Beats are Web Animations (`el.animate`, no DOM attributes — React 19 flags pre-hydration attribute injection) created by the marker in the inline script of app/layout.tsx: it walks the visible `.escr-landing-page` in DOM order, descends containers up to 3 levels, keeps tables/lists whole, forms included, cap 16 beats. Armed via `html.escr-cascade` (pre-paint on document loads, by PageTransition whenever the pathname changes), disarmed once settled (beat count × 50ms + 470ms, never before 750ms) |
+| Same-path updates (tabs, status pills, pagination, search/filter) | `escr-page-in` — content fades in **top to bottom**: clip-path sweep reveals the page downward while opacity ramps, 200ms |
+| Mobile drawer / backdrop | slide-in 250ms / fade 150ms |
+| Toast / modal | slide-up 220ms / scale-fade 200ms |
+
+One mechanism covers every switch: `PageTransition` re-runs the marker
+(`'restart'` mode — beats replay from 0) on every pathname change
+(fresh template mount or in-place RSC patch) and replays the wipe for
+same-path patches (its MutationObserver) — search, tab and filter
+updates never re-trigger the cascade. Query-only template remounts
+(Next remounts templates on `searchParams` changes too) are detected
+via `lastPathname` and do not arm. Pages opt in with the
+`.escr-landing-page` class on their root (every app page has it;
+unmarked routes such as 404 fall back to the wipe) — content blocks
+need no per-element markup.
+Wipe suppression while armed keys off `data-cascade="on"` on `<html>` —
+derived from the **visible** page content, because Next keeps the
+previous page's root hidden (`display:none`) inside the wrapper after
+soft navigations, and a `:has(.escr-landing-page)` check would false-match
+that stale root and kill the wipe on unmarked targets. Disarming swaps
+the flag for `escr-landing-done` (a pin) so the wipe never restarts
+mid-session; the next switch lifts the pin before re-arming.
+
+**Reduced motion:** global `0.01ms` override + the marker cancels and
+skips all WAAPI beats (explicit `matchMedia` guard) + the
+MutationObserver is never attached — content appears instantly.
+
 ---
 
 ## 3. Layout Framework
@@ -115,8 +153,7 @@ Card padding = 24px. Grid gutter = 24px.
 │   264px       │  Tabs / filter pills                        │
 │               ├──────────────────────────────────────────────┤
 │  ◉ ESCR logo  │  ┌─────────┐ ┌─────────┐ ┌─────────┐        │
-│  [🔍 Search]  │  │ StatCard│ │ StatCard│ │ StatCard│        │
-│               │  └─────────┘ └─────────┘ └─────────┘        │
+│               │  │ StatCard│ │ StatCard│ │ StatCard│        │
 │  ▸ Dashboard  │  ┌──────────────────────────────────────┐    │
 │  ▸ Requests   │  │  Data table (search · filters ·      │    │
 │  ▸ Books      │  │  badges · actions · pagination)      │    │
@@ -152,7 +189,7 @@ All: `focus-visible` → 2px `primary-500` ring, 2px offset.
 ### 4.2 Stat card (from reference)
 ```
 ┌──────────────────────────────────────────┐
-│ Total active loans                   ⋮  │   ← header: 14px/500 gray-500
+│ Books out                           ⋮  │   ← header: 14px/500 gray-500
 │                                          │
 │ 128   ↗ 2.4%  vs last week              │   ← number 24–36px/600 gray-900 (−0.02em)
 │                                          │      delta 12px/500 success-500 ▲ or error-500 ▼
@@ -160,7 +197,7 @@ All: `focus-visible` → 2px `primary-500` ring, 2px offset.
 └──────────────────────────────────────────┘
 ```
 - 3 across ≥1024px, 2 across ≥640px, 1 across on mobile.
-- Sparkline: 7–30 points, no axes, `strokeWidth 2`, area fill `rgba(127,86,217,.08)`.
+- Sparkline: 7–30 points, no axes, `strokeWidth 2`, area fill `rgba(211,32,32,.08)`.
 
 ### 4.3 Tabs / filter pills
 Container `gray-100` (or bordered), active pill = white bg + `shadow-xs` + `gray-900` text;
@@ -182,7 +219,7 @@ inactive `gray-500`. Counts shown as `Pending (12)`.
 ### 4.6 Forms
 - Label 14px/500 `gray-700` above, 8px gap.
 - Input h-40px, radius 8px, border `gray-300`, focus: border `primary-500` +
-  `box-shadow 0 0 0 4px rgba(127,86,217,.12)`.
+  `box-shadow 0 0 0 4px rgba(211,32,32,.12)`.
 - Error: border `error-500` + 12px `error-500` message, `aria-invalid`.
 - Helper text 12px `gray-500`.
 
@@ -202,7 +239,7 @@ inactive `gray-500`. Counts shown as `Pending (12)`.
 Top-right actions: `Switch dashboard` (secondary) · `Export report` (primary).
 
 1. **Tab row:** All activity · Pending requests · Overdue · Returns · Fines
-2. **Three stat cards:** `Total books` · `Active loans` · `Overdue this week`
+2. **Three stat cards:** `Total books` · `Books out` · `Overdue this week`
    (each with delta vs last week + sparkline)
 3. **"Borrow activity" table** — columns:
    `checkbox · Student (ID) · Book · Requested/Released · Due date · Status · Actions`
@@ -228,14 +265,14 @@ Top-right actions: `Switch dashboard` (secondary) · `Export report` (primary).
 
 ```
 ┌────────────────────────────────────────────────────┐
-│  Hello, Maria!  ·  2024-1056 · BSIT 2A     [avatar]│  ← soft violet gradient banner
+│  Hello, Maria!  ·  2024-1056 · BSIT 2A     [avatar]│  ← soft seal-red gradient banner
 ├────────────────────────────────────────────────────┤
 │ ┌──────────┐ ┌──────────┐ ┌──────────────────┐     │
 │ │ 2 books  │ │ Due in   │ │ Balance          │     │
-│ │ out      │ │ 3 days ⏱│ │ ₱0.00  ✅        │     │
+│ │ out      │ │ 3 days ⏱│ │ ₱0.00            │     │
 │ └──────────┘ └──────────┘ └──────────────────┘     │
 │                                                    │
-│ 📚 My active loans                                 │
+│ 📚 My borrowed books                                 │
 │ ┌──────────────────────────────────────────────┐   │
 │ │ 📖 The Great Gatsby          ⏱ 3 days left   │   │
 │ │ Due Oct 14, 2026             [View details]  │   │
@@ -250,7 +287,7 @@ Top-right actions: `Switch dashboard` (secondary) · `Export report` (primary).
 
 | Route | Design |
 |---|---|
-| `/dashboard` | Greeting banner + 3 hero cards + active-loan countdown cards + pending-request feed |
+| `/dashboard` | Greeting banner + 3 hero cards + borrowed-book countdown cards + pending-request feed |
 | `/dashboard/catalog` | Responsive **cover-card grid** (2/3/5 cols), search + category chips, per-card availability dot + `Request book` button (disabled state: "Already requested" / "No copies") |
 | `/dashboard/requests` | Vertical **stepper timeline** per request: Requested → Reviewed → (Released) with timestamps & decline reason |
 | `/dashboard/loans` | Big countdown chip: green >3 days · orange ≤3 days · red overdue with live ₱ owed |
@@ -258,6 +295,8 @@ Top-right actions: `Switch dashboard` (secondary) · `Export report` (primary).
 | `/dashboard/profile` | Read-only account card + change-password form |
 
 **Countdown chip:** pill with clock icon; `success` >3d, `warning` 1–3d, `error` overdue.
+
+**Balance figures:** always `error-700` red (dashboard hero + penalties hero, even at ₱0.00) — a balance is money owed, never `success` green.
 
 ---
 
@@ -278,8 +317,9 @@ Top-right actions: `Switch dashboard` (secondary) · `Export report` (primary).
 ## 8. Assets & Handoff
 
 - **Icons:** lucide-react, 20px default / 16px in tables, `strokeWidth 1.75`.
-- **Logos:** `ESCR` wordmark + library glyph placeholder (SVG) in sidebar top.
-- **Book covers:** fallback = violet-100 block with title initials.
+- **Logos:** ESCR seal — `public/logo.png` (256px PNG) in sidebar top + both login
+  lockups; favicon = `app/icon.png` (128px seal). Gold accent rule under the login hero.
+- **Book covers:** fallback = primary-100 block with title initials.
 - **Fonts:** Inter (400/500/600/700) via `next/font`, self-hosted.
 - **Handoff notes:** every component maps 1:1 to Tailwind classes using the tokens above;
   spacing/radius/shadow values are never hardcoded outside `tailwind.config.ts`.

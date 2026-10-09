@@ -15,7 +15,8 @@ export const metadata: Metadata = {
  */
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen bg-white">
+    // escr-landing-page: auto-marker cascades all content blocks
+    <div className="escr-landing-page flex min-h-screen bg-white">
       {/* Branding panel */}
       <aside
         className="hidden w-1/2 flex-col justify-between bg-primary-700 p-12 text-white lg:flex"
@@ -29,6 +30,7 @@ export default function LoginPage() {
               width={32}
               height={32}
               className="size-8"
+              priority
             />
           </span>
           <span className="flex flex-col">
@@ -48,7 +50,7 @@ export default function LoginPage() {
           />
           <p className="mt-4 text-base text-primary-100">
             Request books, watch your due dates, and keep an eye on your
-            balance. Loans run for 7 days.
+            balance. Books can be borrowed for 7 days.
           </p>
         </div>
 
@@ -71,6 +73,7 @@ export default function LoginPage() {
                 width={28}
                 height={28}
                 className="size-7"
+                priority
               />
             </span>
             <span className="flex flex-col">

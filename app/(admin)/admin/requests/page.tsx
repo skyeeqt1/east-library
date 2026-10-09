@@ -93,29 +93,33 @@ export default async function AdminRequestsPage({
 
   const { status, page } = parseRequestsQuery(await searchParams);
 
-  const me = await getCurrentProfile();
+  // Profile, counts and rows are independent reads, so all three overlap in
+  // one wave; the session gate below still fires before rendering.
+  const [me, data] = await Promise.all([
+    getCurrentProfile(),
+    (async (): Promise<LoadedRequests | null> => {
+      try {
+        const [counts, pending, decided] = await Promise.all([
+          getRequestCounts(),
+          status === "pending"
+            ? getPendingRequests({ page, perPage: REQUESTS_PER_PAGE })
+            : Promise.resolve(null),
+          status === "pending"
+            ? Promise.resolve(null)
+            : getDecidedRequests({
+                // "all" = every R-12 state; otherwise one of APPROVED/DECLINED.
+                status: status === "all" ? undefined : status.toUpperCase(),
+                page,
+                perPage: REQUESTS_PER_PAGE,
+              }),
+        ]);
+        return { counts, pending, decided };
+      } catch {
+        return null; // surface a readable error instead of an empty queue
+      }
+    })(),
+  ]);
   if (!me) redirect("/login");
-
-  let data: LoadedRequests | null = null;
-  try {
-    const counts = await getRequestCounts();
-    const pending =
-      status === "pending"
-        ? await getPendingRequests({ page, perPage: REQUESTS_PER_PAGE })
-        : null;
-    const decided =
-      status === "pending"
-        ? null
-        : await getDecidedRequests({
-            // "all" = every R-12 state; otherwise one of APPROVED/DECLINED.
-            status: status === "all" ? undefined : status.toUpperCase(),
-            page,
-            perPage: REQUESTS_PER_PAGE,
-          });
-    data = { counts, pending, decided };
-  } catch {
-    data = null; // surface a readable error instead of an empty queue
-  }
 
   const rows = data?.pending?.rows ?? data?.decided?.rows ?? [];
   const total = data?.pending?.total ?? data?.decided?.total ?? 0;
@@ -143,7 +147,8 @@ export default async function AdminRequestsPage({
       navVariant="admin"
       user={{ name: me.full_name, id: me.student_id ?? "LIBRARIAN" }}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         {data === null ? (
           <div
             role="alert"

@@ -92,25 +92,25 @@ export default async function AdminSettingsPage() {
   // Block prerender validation before any session/date work — `formatRelativeTime`
   // calls Date.now(), which Next flags as unstable if evaluated in a prerender pass.
   await connection();
-  const me = await getCurrentProfile();
+  // Profile, session identity (email + last sign-in) and the settings/audit
+  // reads are independent — run the three waves concurrently.
+  const supabase = await createClient();
+  const [me, sessionRes, dataResult] = await Promise.all([
+    getCurrentProfile(),
+    supabase.auth.getUser(),
+    (async () => {
+      try {
+        return await Promise.all([getLibrarySettings(), getSettingsAudit(10)]);
+      } catch {
+        return null; // surface a readable error instead of a broken form
+      }
+    })(),
+  ]);
   if (!me) redirect("/login");
 
-  // Session identity for the account card (email + last sign-in).
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  let settings: LibrarySettings | null = null;
-  let audit: SettingsAuditRow[] = [];
-  try {
-    [settings, audit] = await Promise.all([
-      getLibrarySettings(),
-      getSettingsAudit(10),
-    ]);
-  } catch {
-    settings = null; // surface a readable error instead of a broken form
-  }
+  const user = sessionRes.data.user;
+  const settings: LibrarySettings | null = dataResult?.[0] ?? null;
+  const audit: SettingsAuditRow[] = dataResult?.[1] ?? [];
 
   const details: Array<{ label: string; value: React.ReactNode }> = [
     { label: "Full name", value: me.full_name },
@@ -215,7 +215,8 @@ export default async function AdminSettingsPage() {
       navVariant="admin"
       user={{ name: me.full_name, id: me.student_id ?? "LIBRARIAN" }}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         {settings === null ? (
           <div
             role="alert"

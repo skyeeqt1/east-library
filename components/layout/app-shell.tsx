@@ -98,7 +98,7 @@ export function AppShell({
           onKeyDown={handleDrawerKeyDown}
         >
           <div
-            className="absolute inset-0 bg-backdrop"
+            className="absolute inset-0 bg-backdrop escr-fade-in"
             aria-hidden="true"
             onMouseDown={closeDrawer}
           />
@@ -108,7 +108,7 @@ export function AppShell({
             role="dialog"
             aria-modal="true"
             aria-label="Navigation"
-            className="absolute inset-y-0 left-0 max-w-[85vw] shadow-lg"
+            className="escr-drawer-in absolute inset-y-0 left-0 max-w-[85vw] shadow-lg"
             style={{ width: SIDEBAR_WIDTH }}
           >
             <AppSidebar

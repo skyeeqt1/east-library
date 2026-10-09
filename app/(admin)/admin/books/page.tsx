@@ -80,25 +80,29 @@ export default async function AdminBooksPage({
   const { q, category, page } = parseBooksQuery(await searchParams);
   const filtering = q.length > 0 || category.length > 0;
 
-  const me = await getCurrentProfile();
+  // The profile read and the data reads don't depend on each other, so they
+  // overlap in one wave; the session gate below still fires before rendering.
+  const [me, data] = await Promise.all([
+    getCurrentProfile(),
+    (async (): Promise<LoadedCatalog | null> => {
+      try {
+        const [stats, catalog, categories] = await Promise.all([
+          getCatalogStats(),
+          getBooksWithAvailability({
+            query: q || undefined,
+            category: category || undefined,
+            page,
+            perPage: BOOKS_PER_PAGE,
+          }),
+          getDistinctCategories(),
+        ]);
+        return { stats, catalog, categories };
+      } catch {
+        return null; // surface a readable error instead of an empty catalog
+      }
+    })(),
+  ]);
   if (!me) redirect("/login");
-
-  let data: LoadedCatalog | null = null;
-  try {
-    const [stats, catalog, categories] = await Promise.all([
-      getCatalogStats(),
-      getBooksWithAvailability({
-        query: q || undefined,
-        category: category || undefined,
-        page,
-        perPage: BOOKS_PER_PAGE,
-      }),
-      getDistinctCategories(),
-    ]);
-    data = { stats, catalog, categories };
-  } catch {
-    data = null; // surface a readable error instead of an empty catalog
-  }
 
   const rows = data?.catalog.rows ?? [];
   const pageCount = Math.max(
@@ -114,7 +118,8 @@ export default async function AdminBooksPage({
       user={{ name: me.full_name, id: me.student_id ?? "LIBRARIAN" }}
       actions={<CreateBookButton categories={data?.categories ?? []} />}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         {data === null ? (
           <div
             role="alert"
@@ -150,7 +155,7 @@ export default async function AdminBooksPage({
                 data={[]}
               />
               <StatCard
-                title="Copies on loan"
+                title="Copies out"
                 value={data.stats.onLoanCopies}
                 data={[]}
               />

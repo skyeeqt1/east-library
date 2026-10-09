@@ -54,7 +54,7 @@ export function Toast({
       role="status"
       aria-live="polite"
       className={cn(
-        "escr-modal-in fixed bottom-4 right-4 z-[60] flex w-[360px] max-w-[calc(100vw-2rem)] items-start gap-3 rounded-lg border px-4 py-3 shadow-lg",
+        "escr-toast-in fixed bottom-4 right-4 z-[60] flex w-[360px] max-w-[calc(100vw-2rem)] items-start gap-3 rounded-lg border px-4 py-3 shadow-lg",
         classes,
       )}
     >

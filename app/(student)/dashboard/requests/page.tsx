@@ -75,7 +75,8 @@ export default async function StudentRequestsPage({
       navVariant="student"
       user={{ name: me.full_name, id: me.student_id ?? me.role }}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         <RequestStatusTabs status={status} />
 
         {listing === null ? (

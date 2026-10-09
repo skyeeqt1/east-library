@@ -60,7 +60,8 @@ export default async function StudentProfilePage() {
       navVariant="student"
       user={{ name: me.full_name, id: me.student_id ?? me.role }}
     >
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page grid gap-6 lg:grid-cols-2">
         {/* Read-only account card */}
         <section aria-labelledby="account-details-heading" className="flex flex-col gap-4">
           <h2 id="account-details-heading" className="text-lg font-semibold text-gray-900">

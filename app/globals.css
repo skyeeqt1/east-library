@@ -1,7 +1,7 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 /*
- * ESCR Library — Design tokens (design.md §2)
+ * ESCR Library â€” Design tokens (design.md Â§2)
  *
  * Tailwind CSS v4 exposes theme extensions through the `@theme` block instead of a
  * `tailwind.config.ts` file (v4 is CSS-first). Every token below maps 1:1 to the
@@ -11,9 +11,9 @@
  */
 @theme {
   /* ---------------------------------------------------------------
-   * Brand / Primary (ESCR seal red — sampled from logo.png, the
+   * Brand / Primary (ESCR seal red â€” sampled from logo.png, the
    * East Systems Colleges of Rizal seal). White text on primary-500
-   * measures ~5.4:1 and on primary-600 ~6.6:1 (WCAG AA ✓).
+   * measures ~5.4:1 and on primary-600 ~6.6:1 (WCAG AA âœ“).
    * ------------------------------------------------------------- */
   --color-primary-25: #fef4f4;
   --color-primary-50: #fde8e8;
@@ -24,7 +24,7 @@
   --color-primary-700: #9e1616; /* active */
 
   /* ---------------------------------------------------------------
-   * Accent (ESCR seal gold) — decorative only. Gold never carries
+   * Accent (ESCR seal gold) â€” decorative only. Gold never carries
    * text (1.2:1 on white); reserve for rules, marks, and graphics.
    * ------------------------------------------------------------- */
   --color-gold-400: #f5d90a;
@@ -32,19 +32,19 @@
   --color-gold-700: #9e7a00;
 
   /* ---------------------------------------------------------------
-   * Neutrals — design.md §2.1
+   * Neutrals â€” design.md Â§2.1
    * ------------------------------------------------------------- */
   --color-gray-25: #fcfcfd; /* row hover */
   --color-gray-50: #f9fafb; /* table header, sidebar hover */
   --color-gray-100: #f2f4f7; /* chips, active nav pill */
   --color-gray-200: #e4e7ec; /* borders */
   --color-gray-300: #d0d5dd; /* input borders */
-  --color-gray-500: #667085; /* secondary text (AA on white ✓) */
+  --color-gray-500: #667085; /* secondary text (AA on white âœ“) */
   --color-gray-700: #344054;
   --color-gray-900: #101828; /* headings */
 
   /* ---------------------------------------------------------------
-   * Semantic — design.md §2.1
+   * Semantic â€” design.md Â§2.1
    * ------------------------------------------------------------- */
   --color-success-25: #f6fef9;
   --color-success-500: #12b76a;
@@ -64,60 +64,60 @@
    * 4.5:1 on info-25. Untitled UI blue-700 keeps the same hue family. */
   --color-info-700: #175cd3;
 
-  /* Modal / drawer backdrop — design.md §4.7 rgba(16,24,40,.55) */
+  /* Modal / drawer backdrop â€” design.md Â§4.7 rgba(16,24,40,.55) */
   --color-backdrop: rgb(16 24 40 / 0.55);
 
   /* ---------------------------------------------------------------
-   * Typography — design.md §2.2 (Inter is injected by next/font as
+   * Typography â€” design.md Â§2.2 (Inter is injected by next/font as
    * --font-inter; weights 400/500/600/700, see app/layout.tsx)
    * ------------------------------------------------------------- */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace; /* IDs, ISBN, ₱ values */
+  --font-mono: "JetBrains Mono", ui-monospace, monospace; /* IDs, ISBN, â‚± values */
 
-  --text-xs: 0.75rem; /* 12px — table meta, badges */
+  --text-xs: 0.75rem; /* 12px â€” table meta, badges */
   --text-xs--line-height: 1rem;
-  --text-sm: 0.875rem; /* 14px — body, table cells */
+  --text-sm: 0.875rem; /* 14px â€” body, table cells */
   --text-sm--line-height: 1.25rem;
-  --text-base: 1rem; /* 16px — default body */
+  --text-base: 1rem; /* 16px â€” default body */
   --text-base--line-height: 1.5rem;
-  --text-lg: 1.125rem; /* 18px — card titles */
+  --text-lg: 1.125rem; /* 18px â€” card titles */
   --text-lg--line-height: 1.75rem;
-  --text-xl: 1.25rem; /* 20px — page titles */
+  --text-xl: 1.25rem; /* 20px â€” page titles */
   --text-xl--line-height: 1.75rem;
-  --text-2xl: 1.5rem; /* 24px — stat numbers */
+  --text-2xl: 1.5rem; /* 24px â€” stat numbers */
   --text-2xl--line-height: 2rem;
-  --text-4xl: 2.25rem; /* 36px — hero metric */
+  --text-4xl: 2.25rem; /* 36px â€” hero metric */
   --text-4xl--line-height: 2.5rem;
 
   --tracking-tight: -0.02em; /* big numbers only */
 
   /* ---------------------------------------------------------------
-   * Spacing — design.md §2.3, 4px base.
+   * Spacing â€” design.md Â§2.3, 4px base.
    * Tailwind's default spacing scale already is `0.25rem * n`, i.e.
-   * space-1…space-16 = 4·8·12·16·20·24·32·40·48·64px. No override needed.
+   * space-1â€¦space-16 = 4Â·8Â·12Â·16Â·20Â·24Â·32Â·40Â·48Â·64px. No override needed.
    * ------------------------------------------------------------- */
 
   /* ---------------------------------------------------------------
-   * Radius — design.md §2.4  (sm 6 / default 8 / lg 10 / xl 12)
+   * Radius â€” design.md Â§2.4  (sm 6 / default 8 / lg 10 / xl 12)
    * The bare 8px radius is exposed as `rounded-md` and as `rounded`.
    * ------------------------------------------------------------- */
-  --radius-sm: 6px; /* badges, inputs (§2.4) / see §4.6 note */
+  --radius-sm: 6px; /* badges, inputs (Â§2.4) / see Â§4.6 note */
   --radius: 8px;
   --radius-md: 8px; /* buttons, inputs, table wrapper */
   --radius-lg: 10px; /* cards */
   --radius-xl: 12px; /* modals */
 
   /* ---------------------------------------------------------------
-   * Elevation — design.md §2.4
+   * Elevation â€” design.md Â§2.4
    * ------------------------------------------------------------- */
   --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05); /* cards, buttons */
   --shadow-md: 0 4px 8px -2px rgb(16 24 40 / 0.1); /* dropdown */
   --shadow-lg: 0 12px 16px -4px rgb(16 24 40 / 0.08); /* modal */
-  /* Input focus ring — design.md §4.6 (recolor: 211 32 32 = primary-500) */
+  /* Input focus ring â€” design.md Â§4.6 (recolor: 211 32 32 = primary-500) */
   --shadow-focus: 0 0 0 4px rgb(211 32 32 / 0.12);
 
   /* ---------------------------------------------------------------
-   * Motion — design.md §2.4 (guarded by prefers-reduced-motion below)
+   * Motion â€” design.md Â§2.4 (guarded by prefers-reduced-motion below)
    * ------------------------------------------------------------- */
   --duration-fast: 150ms;
   --duration-normal: 200ms;
@@ -140,14 +140,14 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Focus is never removed — visible 2px primary outline, 2px offset (design §7) */
+  /* Focus is never removed â€” visible 2px primary outline, 2px offset (design Â§7) */
   :focus-visible {
     outline: 2px solid var(--color-primary-500);
     outline-offset: 2px;
   }
 
   /*
-   * Motion guard — design.md §2.4: all motion wrapped in
+   * Motion guard â€” design.md Â§2.4: all motion wrapped in
    * @media (prefers-reduced-motion: reduce).
    */
   @media (prefers-reduced-motion: reduce) {
@@ -155,6 +155,9 @@
     ::before,
     ::after {
       animation-duration: 0.01ms !important;
+      /* Zero delays too: a delayed animation with `backwards` fill
+         would keep elements hidden for the full delay otherwise. */
+      animation-delay: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
@@ -163,7 +166,7 @@
 }
 
 @layer utilities {
-  /* Modal entrance — neutralised above for reduced-motion users. */
+  /* Modal entrance â€” neutralised above for reduced-motion users. */
   @keyframes escr-modal-in {
     from {
       opacity: 0;
@@ -177,5 +180,122 @@
 
   .escr-modal-in {
     animation: escr-modal-in 200ms var(--ease-standard) both;
+  }
+
+  /* Page transition (app/template.tsx) â€” content fades in from top to
+   * bottom: a clip-path sweep reveals the page downward while opacity
+   * ramps, so the top of the page appears first and the bottom last.
+   * Plays on first load, template remounts, and every tab/pill/pagination
+   * switch (replayed by PageTransition's MutationObserver).
+   *
+   * Fill mode `backwards` (not `both`): after the animation ends, the
+   * element reverts to its natural styles â€” a lingering `clip-path` would
+   * otherwise become a containing block for the rest of the session. */
+  @keyframes escr-page-in {
+    from {
+      opacity: 0;
+      clip-path: inset(0 0 100% 0);
+    }
+    to {
+      opacity: 1;
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+.escr-page-in {
+  animation: escr-page-in 200ms var(--ease-standard) backwards;
+  }
+
+  /* ------------------------------------------------------------------
+   * Landing cascade â€” design Â§2.4.
+   *
+   * Armed via `html.escr-cascade` on EVERY page open and page switch:
+   * - first document open â€” inline script in app/layout.tsx sets the
+   *   class pre-paint so the first frame already cascades;
+   * - SPA page switches â€” PageTransition arms it when the pathname
+   *   changes (fresh mount or in-place RSC patch), restarts the beats,
+   *   and disarms once the cascade settles (scaled to beat count,
+   *   never before 750ms).
+   *
+   * While armed, pages marked `.escr-landing-page` swap the uniform
+   * wipe for a staggered top-to-bottom reveal of ALL their content
+   * blocks. Beats are Web Animations created by the marker (inline
+   * script in app/layout.tsx): it walks the visible page's DOM in
+   * order and animates each block (containers descend up to 3 levels,
+   * tables/lists whole, forms included, cap 16 beats) â€” 50ms apart,
+   * 320ms per block, keyframes inline in JS. WAAPI writes no DOM
+   * attributes React diffs (pre-hydration attribute injection trips
+   * React 19's hydration checker) and is invisible to CSS cascade
+   * rules â€” hence no `data-reveal` selectors here. Search/filter
+   * mutations do NOT re-arm the cascade (pathname unchanged) â€” they
+   * keep the subtle wipe so typing never re-flashes the page.
+   *
+   * The wipe is suppressed (`animation: none`) only while armed, and
+   * only when the VISIBLE page is marked â€” via `data-cascade="on"` on
+   * <html> (the animation-state hub; already suppressHydrationWarning),
+   * which PageTransition derives from the rendered (not display:none'd)
+   * content. A `:has(.escr-landing-page)` check would false-match the
+   * previous page's stale root that Next keeps hidden in the wrapper
+   * after soft navigations, killing the wipe on unmarked targets.
+   * Unmarked pages keep the wipe. Disarming would re-enable
+   * `escr-page-in` mid-session (visible pop from 0), so PageTransition
+   * swaps the flag for `escr-landing-done`, which pins the wipe off
+   * permanently; the next page switch lifts the pin right before
+   * re-arming the cascade.
+   *
+   * Beats use `fill: backwards` â€” blocks stay hidden until their beat
+   * starts; after the end they revert to natural styles.
+   * ------------------------------------------------------------------ */
+
+  html.escr-cascade[data-cascade="on"] .escr-page-in {
+    animation: none;
+  }
+
+  html.escr-landing-done .escr-page-in {
+    animation: none;
+  }
+
+  /* Mobile nav drawer â€” slides in from the left (app-shell.tsx). */
+  @keyframes escr-drawer-in {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .escr-drawer-in {
+    animation: escr-drawer-in 250ms var(--ease-standard) both;
+  }
+
+  /* Backdrop fade â€” shared by the drawer and any overlay dimming. */
+  @keyframes escr-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .escr-fade-in {
+    animation: escr-fade-in 150ms var(--ease-standard) both;
+  }
+
+  /* Toast entrance â€” slides up from the bottom-right corner. */
+  @keyframes escr-toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .escr-toast-in {
+    animation: escr-toast-in 220ms var(--ease-standard) both;
   }
 }

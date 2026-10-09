@@ -75,38 +75,44 @@ export default async function AdminStudentsPage({
   const { q, status, page } = parseStudentsQuery(await searchParams);
   const term = sanitizeSearchTerm(q);
 
-  const me = await getCurrentProfile();
-  if (!me) redirect("/login");
+  // The profile read and the student queries don't depend on each other, so
+  // they overlap in one wave; the session gate below still fires before
+  // any of it renders (the queries are read-only under RLS).
+  const [me, [allRes, activeRes, blockedRes, pageRes]] = await Promise.all([
+    getCurrentProfile(),
+    (async () => {
+      const supabase = await createClient();
 
-  const supabase = await createClient();
+      const buildQuery = (
+        statusFilter?: "ACTIVE" | "BLOCKED",
+        head = false,
+      ) => {
+        let query = supabase
+          .from("profiles")
+          .select(head ? "id" : "*", { count: "exact", head })
+          .eq("role", "STUDENT");
+        if (term) {
+          query = query.or(
+            `student_id.ilike.%${term}%,full_name.ilike.%${term}%,course_section.ilike.%${term}%`,
+          );
+        }
+        if (statusFilter) query = query.eq("status", statusFilter);
+        return query;
+      };
 
-  const buildQuery = (
-    statusFilter?: "ACTIVE" | "BLOCKED",
-    head = false,
-  ) => {
-    let query = supabase
-      .from("profiles")
-      .select(head ? "id" : "*", { count: "exact", head })
-      .eq("role", "STUDENT");
-    if (term) {
-      query = query.or(
-        `student_id.ilike.%${term}%,full_name.ilike.%${term}%,course_section.ilike.%${term}%`,
-      );
-    }
-    if (statusFilter) query = query.eq("status", statusFilter);
-    return query;
-  };
+      const offset = (page - 1) * STUDENTS_PER_PAGE;
 
-  const offset = (page - 1) * STUDENTS_PER_PAGE;
-
-  const [allRes, activeRes, blockedRes, pageRes] = await Promise.all([
-    buildQuery(undefined, true),
-    buildQuery("ACTIVE", true),
-    buildQuery("BLOCKED", true),
-    buildQuery(status === "ALL" ? undefined : status)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + STUDENTS_PER_PAGE - 1),
+      return Promise.all([
+        buildQuery(undefined, true),
+        buildQuery("ACTIVE", true),
+        buildQuery("BLOCKED", true),
+        buildQuery(status === "ALL" ? undefined : status)
+          .order("created_at", { ascending: false })
+          .range(offset, offset + STUDENTS_PER_PAGE - 1),
+      ]);
+    })(),
   ]);
+  if (!me) redirect("/login");
 
   const rows = parseProfileRows(pageRes.data);
   const queryError = pageRes.error;
@@ -129,7 +135,8 @@ export default async function AdminStudentsPage({
       user={{ name: me.full_name, id: me.student_id ?? "LIBRARIAN" }}
       actions={<CreateAccountButton />}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         <StudentsToolbar q={q} status={status} counts={counts} />
 
         {queryError ? (

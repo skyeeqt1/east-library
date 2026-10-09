@@ -156,25 +156,29 @@ export default async function AdminPenaltiesPage({
 
   const { status, type, q, page } = parsePenaltiesQuery(await searchParams);
 
-  const me = await getCurrentProfile();
+  // The profile read and the data reads don't depend on each other, so they
+  // overlap in one wave; the session gate below still fires before rendering.
+  const [me, data] = await Promise.all([
+    getCurrentProfile(),
+    (async (): Promise<LoadedPenalties | null> => {
+      try {
+        const [counts, fines] = await Promise.all([
+          getFineCounts(),
+          getAdminFines({
+            status: toFineStatusArg(status),
+            type: toFineTypeArg(type),
+            q: q || undefined,
+            page,
+            perPage: PENALTIES_PER_PAGE,
+          }),
+        ]);
+        return { counts, fines };
+      } catch {
+        return null; // surface a readable error instead of an empty table
+      }
+    })(),
+  ]);
   if (!me) redirect("/login");
-
-  let data: LoadedPenalties | null = null;
-  try {
-    const [counts, fines] = await Promise.all([
-      getFineCounts(),
-      getAdminFines({
-        status: toFineStatusArg(status),
-        type: toFineTypeArg(type),
-        q: q || undefined,
-        page,
-        perPage: PENALTIES_PER_PAGE,
-      }),
-    ]);
-    data = { counts, fines };
-  } catch {
-    data = null; // surface a readable error instead of an empty table
-  }
 
   const rows = data?.fines.rows ?? [];
   const total = data?.fines.total ?? 0;
@@ -190,7 +194,8 @@ export default async function AdminPenaltiesPage({
       navVariant="admin"
       user={{ name: me.full_name, id: me.student_id ?? "LIBRARIAN" }}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         {data === null ? (
           <div
             role="alert"

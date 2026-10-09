@@ -147,7 +147,8 @@ export default async function StudentCatalogPage({
       navVariant="student"
       user={{ name: me.full_name, id: me.student_id ?? me.role }}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         {/* R-25 / US-7 — unpaid balance inline alerts (design §4.7):
             one line per fine type, straight from getBlockingNotices() */}
         {data && data.notices.length > 0 ? (

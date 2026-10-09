@@ -143,25 +143,29 @@ export default async function AdminDamagesPage({
 
   const { status, page } = parseDamagesQuery(await searchParams);
 
-  const me = await getCurrentProfile();
+  // The profile read and the data reads don't depend on each other, so they
+  // overlap in one wave; the session gate below still fires before rendering.
+  const [me, data] = await Promise.all([
+    getCurrentProfile(),
+    (async (): Promise<LoadedDamages | null> => {
+      try {
+        const [reports, queue] = await Promise.all([
+          getDamageReports({
+            status: toDamageStatusArg(status),
+            page,
+            perPage: DAMAGES_PER_PAGE,
+          }),
+          status === "pending"
+            ? getAssessableReturns({ page: 1, perPage: DAMAGES_PER_PAGE })
+            : Promise.resolve(null),
+        ]);
+        return { reports, queue };
+      } catch {
+        return null; // surface a readable error instead of an empty table
+      }
+    })(),
+  ]);
   if (!me) redirect("/login");
-
-  let data: LoadedDamages | null = null;
-  try {
-    const [reports, queue] = await Promise.all([
-      getDamageReports({
-        status: toDamageStatusArg(status),
-        page,
-        perPage: DAMAGES_PER_PAGE,
-      }),
-      status === "pending"
-        ? getAssessableReturns({ page: 1, perPage: DAMAGES_PER_PAGE })
-        : Promise.resolve(null),
-    ]);
-    data = { reports, queue };
-  } catch {
-    data = null; // surface a readable error instead of an empty table
-  }
 
   const rows = data?.reports.rows ?? [];
   const total = data?.reports.total ?? 0;
@@ -180,7 +184,8 @@ export default async function AdminDamagesPage({
       navVariant="admin"
       user={{ name: me.full_name, id: me.student_id ?? "LIBRARIAN" }}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         {data === null ? (
           <div
             role="alert"

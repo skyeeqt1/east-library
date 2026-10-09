@@ -17,7 +17,7 @@ import {
 import { getStudentLoans } from "@/lib/catalog/loans-read";
 import { getCurrentProfile } from "@/lib/auth/guards";
 
-export const metadata: Metadata = { title: "My Loans" };
+export const metadata: Metadata = { title: "My Borrowed Books" };
 
 /** Session cookie + searchParams are read per request — blocking route. */
 export const instant = false;
@@ -77,12 +77,13 @@ export default async function StudentLoansPage({
 
   return (
     <AppShell
-      title="My Loans"
+      title="My Borrowed Books"
       subtitle="Your checked-out books, their countdowns and anything you owe."
       navVariant="student"
       user={{ name: me.full_name, id: me.student_id ?? me.role }}
     >
-      <div className="flex flex-col gap-6">
+      {/* escr-landing-page: auto-marker cascades all content blocks */}
+      <div className="escr-landing-page flex flex-col gap-6">
         <LoanStatusTabs status={status} />
 
         {listing === null ? (
@@ -91,7 +92,7 @@ export default async function StudentLoansPage({
             className="rounded-lg border border-error-500 bg-error-25 px-6 py-10 text-center"
           >
             <p className="text-sm font-medium text-error-700">
-              Could not load your loans.
+              Could not load your borrowed books.
             </p>
             <p className="mt-1 text-sm text-error-700">
               Please try again in a moment.
@@ -110,9 +111,9 @@ export default async function StudentLoansPage({
             </p>
             <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">
               {onCurrentPage
-                ? "Return to the first page to see the remaining loans."
+                ? "Return to the first page to see the rest."
                 : status === "returned"
-                  ? "Loans you finish will be archived here with their return dates."
+                  ? "Books you return will be archived here with their return dates."
                   : "Every approved request you pick up shows up here with its due date."}
             </p>
             {onCurrentPage ? (
@@ -131,7 +132,7 @@ export default async function StudentLoansPage({
                 href={STUDENT_LOANS_PATH}
                 className="mt-4"
               >
-                Show active loans
+                Show checked-out books
               </Button>
             ) : (
               <Button size="md" href="/dashboard/catalog" className="mt-4">
@@ -156,7 +157,7 @@ export default async function StudentLoansPage({
                 query={status === "open" ? {} : { status }}
                 page={page}
                 pageCount={pageCount}
-                label="Loans pagination"
+                label="Borrowed books pagination"
               />
             ) : null}
           </div>
