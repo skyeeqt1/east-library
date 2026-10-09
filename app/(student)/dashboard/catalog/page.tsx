@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { BookOpen, CircleAlert } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,9 @@ export default async function StudentCatalogPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Block prerender validation before session/date work (Date.now() in supabase-js / formatRelativeTime).
+  await connection();
+
   const { q, category, page } = parseCatalogQuery(await searchParams);
   const filtering = q.length > 0 || category.length > 0;
 

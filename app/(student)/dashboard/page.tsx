@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import {
   ArrowRight,
   BookOpen,
@@ -168,6 +169,9 @@ function bannerFor(urgent: StudentLoanRow | null, balance: number): DueBanner | 
  * pickup).
  */
 export default async function StudentDashboardPage() {
+  // Block prerender validation before session/date work (Date.now() in supabase-js / formatRelativeTime).
+  await connection();
+
   const me = await getCurrentProfile();
   if (!me) redirect("/login");
 

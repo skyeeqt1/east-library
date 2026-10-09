@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { ArrowLeftRight } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge, toneForStatus } from "@/components/ui/badge";
@@ -94,6 +95,9 @@ export default async function AdminLoansPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Block prerender validation before session/date work (Date.now() in supabase-js / formatRelativeTime).
+  await connection();
+
   const { status, q, page } = parseLoansQuery(await searchParams);
 
   const me = await getCurrentProfile();

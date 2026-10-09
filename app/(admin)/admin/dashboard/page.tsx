@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
@@ -190,6 +191,9 @@ export default async function AdminDashboardPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Block prerender validation before session/date work (Date.now() in supabase-js / formatRelativeTime).
+  await connection();
+
   const { tab, status, q, page } = parseDashboardQuery(await searchParams);
 
   const me = await getCurrentProfile();

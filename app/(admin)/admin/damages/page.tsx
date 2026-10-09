@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { TriangleAlert } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge, toneForStatus } from "@/components/ui/badge";
@@ -137,6 +138,9 @@ export default async function AdminDamagesPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Block prerender validation before session/date work (Date.now() in supabase-js / formatRelativeTime).
+  await connection();
+
   const { status, page } = parseDamagesQuery(await searchParams);
 
   const me = await getCurrentProfile();

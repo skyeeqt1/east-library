@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { CircleAlert, Receipt } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,9 @@ export default async function StudentPenaltiesPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Block prerender validation before session/date work (Date.now() in supabase-js / formatRelativeTime).
+  await connection();
+
   const { status, page } = parseStudentPenaltiesQuery(await searchParams);
 
   const me = await getCurrentProfile();

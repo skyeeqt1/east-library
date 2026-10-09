@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { Activity, BookOpen, CircleAlert, History, Library, Receipt } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
@@ -562,6 +563,9 @@ export default async function AdminReportsPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Block prerender validation before session/date work (Date.now() in supabase-js / formatRelativeTime).
+  await connection();
+
   const { tab } = parseReportsQuery(await searchParams);
 
   const me = await getCurrentProfile();

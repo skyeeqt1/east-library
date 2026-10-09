@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { UserPlus } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +68,10 @@ export default async function AdminStudentsPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Block prerender validation before session work: supabase-js reads token
+  // expiry via Date.now(), which Next flags as an unstable value in a
+  // static-prerender pass (dev "1 Issue" badge).
+  await connection();
   const { q, status, page } = parseStudentsQuery(await searchParams);
   const term = sanitizeSearchTerm(q);
 

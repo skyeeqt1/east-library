@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { History } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card } from "@/components/ui/card";
@@ -88,6 +89,9 @@ function summarizeChanges(row: SettingsAuditRow): Array<{
  * client so RLS applies (schema §4); nothing here writes.
  */
 export default async function AdminSettingsPage() {
+  // Block prerender validation before any session/date work — `formatRelativeTime`
+  // calls Date.now(), which Next flags as unstable if evaluated in a prerender pass.
+  await connection();
   const me = await getCurrentProfile();
   if (!me) redirect("/login");
 

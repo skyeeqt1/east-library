@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CircleAlert, CircleCheck, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +44,12 @@ export function Toast({
     return () => clearTimeout(timer);
   }, [onClose, durationMs, message]);
 
-  return (
+  // Portal to <body>: the toast is often rendered inside sticky headers or
+  // modals, whose stacking context would otherwise trap `fixed` positioning
+  // (design §4.7 requires bottom-right, clear of the topbar actions).
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
       role="status"
       aria-live="polite"
@@ -62,6 +68,7 @@ export function Toast({
       >
         <X className="size-4" aria-hidden="true" />
       </button>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { assertAdmin } from "@/lib/auth/guards";
 
 /**
@@ -21,6 +22,10 @@ export const instant = false;
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Opt out of prerender validation BEFORE assertAdmin(): supabase-js computes
+  // session expiry with Date.now(), which Next flags as an unstable value if
+  // evaluated during a static prerender pass (dev "1 Issue" badge).
+  await connection();
   await assertAdmin();
   return children;
 }
