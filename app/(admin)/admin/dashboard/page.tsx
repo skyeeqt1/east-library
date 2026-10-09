@@ -10,6 +10,7 @@ import {
   DashboardTabs,
   DashboardToolbar,
 } from "@/components/admin/dashboard/dashboard-toolbar";
+import { ExportReportButton } from "@/components/admin/reports/export-report-button";
 import {
   DASHBOARD_PER_PAGE,
   buildDashboardPath,
@@ -234,9 +235,9 @@ export default async function AdminDashboardPage({
           <Button variant="secondary" size="md" href="/dashboard">
             Switch dashboard
           </Button>
-          <Button size="md" disabled title="Coming in a later phase">
-            Export report
-          </Button>
+          {/* CSV download (FR-23) — a plain link, so `next/link` prefetch
+              never fires for a file response. */}
+          <ExportReportButton />
         </>
       }
     >

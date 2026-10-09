@@ -84,16 +84,17 @@ export function AppShell({
 
       {/* Desktop sidebar */}
       <div
-        className="fixed inset-y-0 left-0 z-40 hidden lg:block"
+        className="fixed inset-y-0 left-0 z-40 hidden lg:block print:hidden"
         style={{ width: SIDEBAR_WIDTH }}
       >
         <AppSidebar variant={navVariant} user={user} />
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — print output is the report, not the nav chrome
+          (FR-23 "CSV + print export") */}
       {drawerOpen ? (
         <div
-          className="fixed inset-0 z-50 lg:hidden"
+          className="fixed inset-0 z-50 lg:hidden print:hidden"
           onKeyDown={handleDrawerKeyDown}
         >
           <div
@@ -129,7 +130,8 @@ export function AppShell({
 
       {/* Content column */}
       <div className="lg:pl-[264px]">
-        <header className="sticky top-0 z-30 flex min-h-16 items-center gap-4 border-b border-gray-200 bg-white/95 px-6 backdrop-blur lg:px-8">
+        {/* Title bar — keeps the page title in print, drops the chrome. */}
+        <header className="sticky top-0 z-30 flex min-h-16 items-center gap-4 border-b border-gray-200 bg-white/95 px-6 backdrop-blur lg:px-8 print:static print:backdrop-blur-none">
           <button
             ref={hamburgerRef}
             type="button"
@@ -137,7 +139,7 @@ export function AppShell({
             aria-expanded={drawerOpen}
             aria-controls="app-navigation-drawer"
             aria-label="Open navigation"
-            className="flex size-11 shrink-0 items-center justify-center rounded-md text-gray-700 transition-colors duration-fast hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 lg:hidden"
+            className="flex size-11 shrink-0 items-center justify-center rounded-md text-gray-700 transition-colors duration-fast hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 lg:hidden print:hidden"
           >
             <Menu className="size-5" strokeWidth={1.75} aria-hidden="true" />
           </button>
@@ -151,14 +153,17 @@ export function AppShell({
             ) : null}
           </div>
 
+          {/* Header actions (buttons/links) — never printed. */}
           {actions ? (
-            <div className="flex shrink-0 items-center gap-3">{actions}</div>
+            <div className="flex shrink-0 items-center gap-3 print:hidden">
+              {actions}
+            </div>
           ) : null}
         </header>
 
         <main
           id="main-content"
-          className="mx-auto w-full max-w-[1440px] px-6 py-6 lg:px-8"
+          className="mx-auto w-full max-w-[1440px] px-6 py-6 lg:px-8 print:px-0 print:py-0"
         >
           {children}
         </main>
