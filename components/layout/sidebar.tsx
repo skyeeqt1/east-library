@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Library, LogOut, Search } from "lucide-react";
+import { LogOut, Search } from "lucide-react";
 import { signOut } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, type NavVariant } from "@/components/layout/nav";
@@ -56,14 +57,15 @@ export function AppSidebar({
         className,
       )}
     >
-      {/* Logo area */}
+      {/* Logo area — ESCR seal (public/logo.png) */}
       <div className="flex items-center gap-3 px-6 py-6">
-        <span
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-500 text-white"
-          aria-hidden="true"
-        >
-          <Library className="size-5" strokeWidth={1.75} />
-        </span>
+        <Image
+          src="/logo.png"
+          alt=""
+          width={36}
+          height={36}
+          className="size-9 shrink-0"
+        />
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-base font-semibold tracking-tight text-gray-900">
             ESCR

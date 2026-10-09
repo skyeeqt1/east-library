@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Library } from "lucide-react";
+import Image from "next/image";
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = {
@@ -22,8 +22,14 @@ export default function LoginPage() {
         aria-hidden="true"
       >
         <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-lg bg-white/15">
-            <Library className="size-6" strokeWidth={1.75} />
+          <span className="flex size-10 items-center justify-center rounded-lg bg-white">
+            <Image
+              src="/logo.png"
+              alt=""
+              width={32}
+              height={32}
+              className="size-8"
+            />
           </span>
           <span className="flex flex-col">
             <span className="text-lg font-semibold tracking-tight">ESCR</span>
@@ -35,6 +41,11 @@ export default function LoginPage() {
           <p className="text-4xl font-semibold leading-tight tracking-tight">
             Borrow, track, and return — all in one place.
           </p>
+          {/* Gold rule — matches the seal's inner ring */}
+          <span
+            className="mt-6 block h-1 w-16 rounded-full bg-gold-400"
+            aria-hidden="true"
+          />
           <p className="mt-4 text-base text-primary-100">
             Request books, watch your due dates, and keep an eye on your
             balance. Loans run for 7 days.
@@ -51,10 +62,16 @@ export default function LoginPage() {
         <div className="w-full max-w-[400px]">
           <div className="mb-10 flex items-center gap-3 lg:hidden">
             <span
-              className="flex size-9 items-center justify-center rounded-lg bg-primary-500 text-white"
+              className="flex size-9 items-center justify-center rounded-lg bg-primary-50"
               aria-hidden="true"
             >
-              <Library className="size-5" strokeWidth={1.75} />
+              <Image
+                src="/logo.png"
+                alt=""
+                width={28}
+                height={28}
+                className="size-7"
+              />
             </span>
             <span className="flex flex-col">
               <span className="text-base font-semibold tracking-tight text-gray-900">
