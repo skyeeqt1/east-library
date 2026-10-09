@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -109,7 +110,14 @@ export function Modal({
 
   if (!open) return null;
 
-  return (
+  // Portal to <body>: the modal is often opened from inside the sticky header
+  // (e.g. Create account in the actions slot). The header's `backdrop-blur`
+  // creates a containing block, which would trap `fixed inset-0` positioning
+  // against the 64px header instead of the viewport (clipped, off-center dialog
+  // with a backdrop that only dims the topbar).
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onKeyDown={handleKeyDown}
@@ -163,6 +171,7 @@ export function Modal({
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
