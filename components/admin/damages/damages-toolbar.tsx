@@ -8,7 +8,7 @@ import {
 } from "@/components/admin/damages/damages-query";
 
 /**
- * Status pills for the damage desk (design §4.3): Pending · Resolved · All.
+ * Status pills for the damage desk (design §4.3): All · Pending · Resolved.
  * State lives in the URL — every switch resets `page` so the server component
  * re-queries `getDamageReports()` with the matching filter.
  *
@@ -27,9 +27,9 @@ export function DamagesTabs({ status }: { status: DamagesStatusFilter }) {
         router.replace(buildDamagesPath({ status: id as DamagesStatusFilter, page: 1 }));
       }}
       tabs={[
+        { id: "all", label: "All" },
         { id: "pending", label: "Pending" },
         { id: "resolved", label: "Resolved" },
-        { id: "all", label: "All" },
       ]}
     />
   );

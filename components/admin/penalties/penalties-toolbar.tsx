@@ -53,16 +53,17 @@ export function PenaltiesToolbar({ status, type, q }: PenaltiesToolbarProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Status tabs — Unpaid is the working set (default desk view) */}
+      {/* Status tabs — All first, then the working sets (Unpaid is the
+          default desk view via the URL default, not position) */}
       <Tabs
         aria-label="Filter fines by status"
         activeId={status}
         onChange={(id) => go({ status: id as PenaltiesStatusFilter })}
         tabs={[
+          { id: "all", label: "All" },
           { id: "unpaid", label: "Unpaid" },
           { id: "paid", label: "Paid" },
           { id: "waived", label: "Waived" },
-          { id: "all", label: "All" },
         ]}
       />
 

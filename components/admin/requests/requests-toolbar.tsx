@@ -33,10 +33,10 @@ export function RequestsToolbar({ status, counts }: RequestsToolbarProps) {
       activeId={status}
       onChange={(id) => go(id as RequestsStatusFilter)}
       tabs={[
+        { id: "all", label: "All", count: counts.total },
         { id: "pending", label: "Pending", count: counts.pending },
         { id: "approved", label: "Approved", count: counts.approved },
         { id: "declined", label: "Declined", count: counts.declined },
-        { id: "all", label: "All", count: counts.total },
       ]}
     />
   );
