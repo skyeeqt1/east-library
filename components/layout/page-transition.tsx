@@ -17,7 +17,10 @@ import { useCallback, useEffect, useRef, type ReactNode } from "react";
  *   pathname unchanged) → the uniform 200ms wipe (`escr-page-in`),
  *   replayed by a MutationObserver on this wrapper so patches that keep
  *   the template mounted still animate. Cascading on these would
- *   re-flash whole sections on every keystroke.
+ *   re-flash whole sections on every keystroke. Mutations whose every
+ *   target sits inside a `<form>` are skipped (pending spinner, button
+ *   label, error alert, field errors) — form feedback must never
+ *   flash the page (login Enter).
  *
  * Why the pin: re-enabling `escr-page-in` by dropping a suppression
  * class restarts the wipe from 0 (visible pop). Disarm swaps
@@ -132,7 +135,23 @@ export function PageTransition({ children }: { children: ReactNode }) {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let queued = false;
-    const replay = () => {
+    let pendingRecords: MutationRecord[] = [];
+
+    // Form-interior mutation: the host (parent for childList records,
+    // the text's parent for characterData) sits inside a <form> —
+    // pending spinners, button label swaps, error alerts, field errors.
+    // Replaying the wipe for these flashed the whole login screen the
+    // moment Enter was pressed (server-action pending state), so form
+    // feedback never re-animates the page; content patches outside
+    // forms (rows, pills, sections) keep the designed wipe.
+    const isFormInterior = (m: MutationRecord): boolean => {
+      const host =
+        m.type === "characterData" ? m.target.parentElement : m.target;
+      return host instanceof Element && host.closest("form") !== null;
+    };
+
+    const replay = (records?: MutationRecord[]) => {
+      if (records) pendingRecords.push(...records);
       if (queued) return;
       queued = true;
       // One restart per frame: burst mutations from a single commit
@@ -140,6 +159,8 @@ export function PageTransition({ children }: { children: ReactNode }) {
       // latest navigation wins the batch.
       requestAnimationFrame(() => {
         queued = false;
+        const batch = pendingRecords;
+        pendingRecords = [];
         const path = window.location.pathname;
         const isPageSwitch = path !== lastPathname;
         lastPathname = path;
@@ -161,6 +182,9 @@ export function PageTransition({ children }: { children: ReactNode }) {
           el.classList.add("escr-page-in");
           scheduleDisarm(markCascadeBeats("restart"));
         } else {
+          // Pure form feedback (pending state, alerts, validation
+          // messages) → no wipe, no cascade: the page must hold still.
+          if (batch.length > 0 && batch.every(isFormInterior)) return;
           // Same-path update (filters, tabs, streaming) → plain wipe,
           // never a cascade. Exception: while the cascade is still
           // armed, incoming content belongs to it (streaming) — re-mark
@@ -183,7 +207,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
       });
     };
 
-    const observer = new MutationObserver(replay);
+    const observer = new MutationObserver((records) => replay(records));
     observer.observe(el, {
       childList: true,
       subtree: true,

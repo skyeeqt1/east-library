@@ -1,7 +1,6 @@
 "use server";
 
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { parseProfileRow } from "@/lib/auth/types";
 import {
@@ -48,6 +47,14 @@ export interface LoginState {
   error?: string;
   /** Per-field validation errors, keyed by input `name`. */
   fieldErrors?: Record<string, string>;
+  /**
+   * Set on success: the role home the client should `router.replace`
+   * to. Replacing (instead of `redirect()`, which pushes) keeps
+   * `/login` out of the back history, so BACK from the dashboard
+   * exits the app instead of bouncing through the middleware
+   * redirect and reloading the page.
+   */
+  redirect?: string;
 }
 
 export interface ChangePasswordState {
@@ -57,6 +64,12 @@ export interface ChangePasswordState {
   fieldErrors?: Record<string, string>;
   /** Set once the password has been updated. */
   success?: boolean;
+  /**
+   * When the session is gone, the client `router.replace`s this path —
+   * same replace-not-push rationale as LoginState.redirect so BACK
+   * doesn't bounce through the middleware redirect.
+   */
+  redirect?: string;
 }
 
 /**
@@ -81,7 +94,8 @@ function candidateEmails(identifier: string): string[] {
  *
  * Flow (architecture.md §4):
  *   resolve identifier → synthetic/real email → signInWithPassword →
- *   read `profiles` → reject BLOCKED (R-04) → redirect by role (FR-03).
+ *   read `profiles` → reject BLOCKED (R-04) → return role home for the
+ *   client to router.replace (FR-03).
  */
 export async function login(
   _prevState: LoginState | null,
@@ -170,21 +184,29 @@ export async function login(
     return { error: BLOCKED_LOGIN_ERROR };
   }
 
-  // `redirect` throws NEXT_REDIRECT — keep it outside any try/catch.
-  redirect(role === "ADMIN" ? "/admin/dashboard" : "/dashboard");
+  // Success — return the role home; the client replaces the /login
+  // history entry with it (see LoginState.redirect for why not
+  // redirect(), which pushes /login into the back history and makes
+  // every BACK press bounce through this middleware redirect).
+  // The session cookie is already set, so middleware validates the
+  // target route on the way in (FR-03).
+  return { redirect: role === "ADMIN" ? "/admin/dashboard" : "/dashboard" };
 }
 
 /**
- * Sign out and return to the login screen. Safe to call with no session.
+ * Sign out and return the path the caller should `router.replace` to
+ * ("/login"). Replacing keeps the dashboard out of the back history,
+ * so BACK after signing out exits the app instead of looping through
+ * the middleware redirect. Safe to call with no session.
  */
-export async function signOut(): Promise<void> {
+export async function signOut(): Promise<string> {
   try {
     const supabase = await createClient();
     await supabase.auth.signOut();
   } catch {
     // Missing env / no session — signing out should always land on /login.
   }
-  redirect("/login");
+  return "/login";
 }
 
 /**
@@ -214,7 +236,7 @@ export async function changePassword(
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user?.email) redirect("/login");
+    if (!user?.email) return { redirect: "/login" };
 
     // Brute-force guard on the current-password check.
     const pwKey = `pw:${user.id}`;
@@ -252,16 +274,9 @@ export async function changePassword(
     }
 
     return { success: true };
-  } catch (error) {
-    // NEXT_REDIRECT (signed out mid-flight) must propagate to the client.
-    if (isRedirectError(error)) throw error;
+  } catch {
+    // Failures are reported via the returned state (no redirect control-flow
+    // lives in this action anymore).
     return { error: "Could not update the password. Please try again." };
   }
-}
-
-/** Detect Next.js redirect()/notFound() control-flow errors. */
-function isRedirectError(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false;
-  const code = "digest" in error ? String(error.digest) : "";
-  return code.startsWith("NEXT_REDIRECT") || code.startsWith("NEXT_NOT_FOUND");
 }

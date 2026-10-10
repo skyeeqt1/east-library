@@ -19,7 +19,9 @@ export interface ModalProps {
   title: string;
   /** Optional sub-heading rendered under the title. */
   description?: string;
-  children: ReactNode;
+  /** Optional decorative badge rendered to the left of the title. */
+  icon?: ReactNode;
+  children?: ReactNode;
   /** Action row pinned to the bottom of the dialog. */
   footer?: ReactNode;
   className?: string;
@@ -43,6 +45,7 @@ export function Modal({
   onClose,
   title,
   description,
+  icon,
   children,
   footer,
   className,
@@ -143,15 +146,18 @@ export function Modal({
         )}
       >
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 id={titleId} className="text-lg font-semibold text-gray-900">
-              {title}
-            </h2>
-            {description ? (
-              <p id={descriptionId} className="mt-1 text-sm text-gray-500">
-                {description}
-              </p>
-            ) : null}
+          <div className="flex min-w-0 items-start gap-3">
+            {icon}
+            <div className="min-w-0">
+              <h2 id={titleId} className="text-lg font-semibold text-gray-900">
+                {title}
+              </h2>
+              {description ? (
+                <p id={descriptionId} className="mt-1 text-sm text-gray-500">
+                  {description}
+                </p>
+              ) : null}
+            </div>
           </div>
           <button
             type="button"
@@ -163,7 +169,9 @@ export function Modal({
           </button>
         </div>
 
-        <div className="mt-4 text-sm text-gray-700">{children}</div>
+        {children != null ? (
+          <div className="mt-4 text-sm text-gray-700">{children}</div>
+        ) : null}
 
         {footer ? (
           <div className="mt-6 flex flex-wrap items-center justify-end gap-3">

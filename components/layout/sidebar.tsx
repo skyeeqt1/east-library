@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth/actions";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, type NavVariant } from "@/components/layout/nav";
 
@@ -48,7 +51,21 @@ export function AppSidebar({
   className,
 }: AppSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const items = NAV_ITEMS[variant];
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  // If the page is restored from the back/forward cache mid-sign-out,
+  // the stale `signingOut` flag would leave the dialog spinning forever
+  // (it's not closable while pending) — unlock it on restore.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setSigningOut(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   return (
     <div
@@ -134,9 +151,7 @@ export function AppSidebar({
         </span>
         <button
           type="button"
-          onClick={() => {
-            void signOut();
-          }}
+          onClick={() => setConfirmOpen(true)}
           aria-label="Sign out"
           title="Sign out"
           className="flex size-11 shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors duration-fast hover:bg-gray-50 hover:text-error-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
@@ -144,6 +159,48 @@ export function AppSidebar({
           <LogOut className="size-5" strokeWidth={1.75} aria-hidden="true" />
         </button>
       </div>
+
+      {/* Sign-out confirmation — design §4.7 dialog (misclick guard) */}
+      <Modal
+        open={confirmOpen}
+        onClose={() => {
+          if (!signingOut) setConfirmOpen(false);
+        }}
+        icon={
+          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-50 text-error-500">
+            <LogOut className="size-4.5" strokeWidth={2} aria-hidden="true" />
+          </span>
+        }
+        title="Sign out?"
+        description="You'll need to sign in again to access the library."
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmOpen(false)}
+              disabled={signingOut}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              loading={signingOut}
+              onClick={() => {
+                setSigningOut(true);
+                // Replace /login into history (not push) so BACK after
+                // signing out exits the app instead of bouncing through
+                // the middleware redirect; a rejected action unlocks the
+                // dialog instead of spinning forever.
+                void signOut()
+                  .then((path) => router.replace(path))
+                  .catch(() => setSigningOut(false));
+              }}
+            >
+              Sign out
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }

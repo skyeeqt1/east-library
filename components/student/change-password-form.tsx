@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { changePassword, type ChangePasswordState } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { PasswordField } from "@/components/auth/password-field";
@@ -12,11 +13,18 @@ import { PasswordField } from "@/components/auth/password-field";
  * ("Current password is incorrect." is authoritative) and then calls
  * `auth.updateUser`. Field errors come back keyed by input name; the form is
  * only cleared after a successful change so a rejected attempt never loses
- * what the student typed.
+ * what the student typed. If the session died, the action returns a path the
+ * client `router.replace`s (keeps /login out of the back history).
  */
 export function ChangePasswordForm() {
+  const router = useRouter();
   const [state, setState] = useState<ChangePasswordState | null>(null);
   const [pending, setPending] = useState(false);
+
+  // Session gone: swap this page out of history for /login.
+  useEffect(() => {
+    if (state?.redirect) router.replace(state.redirect);
+  }, [state, router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -27,7 +35,7 @@ export function ChangePasswordForm() {
       setState(result);
       if (result.success) form.reset();
     } catch {
-      // The action redirected (session ended) — navigation is in flight.
+      // Defensive: the action reports failures via its returned state.
     } finally {
       setPending(false);
     }

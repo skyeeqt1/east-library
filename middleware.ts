@@ -170,9 +170,19 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
   const isPublic = PUBLIC_PATHS.has(pathname);
 
+  // Server-action POSTs are marked with the `Next-Action` header. A
+  // middleware redirect would 307-follow the POST to /login and the client
+  // would receive an HTML page where it expects an action response (silent
+  // failure — e.g. "session expired mid-submit" never navigates and shows
+  // nothing). Every action re-verifies session + role itself (assertAdmin /
+  // getCurrentProfile / getUser — rules.md §9), so these pass through and
+  // the action answers with its own redirect/state.
+  const isActionPost =
+    req.method === "POST" && req.headers.get("next-action") !== null;
+
   // 3) Unauthenticated → /login (FR-01). Authenticated /login or / → role home.
   if (!claims?.sub) {
-    if (isPublic) return supabaseResponse;
+    if (isPublic || isActionPost) return supabaseResponse;
     return redirectTo(req, "/login");
   }
 
