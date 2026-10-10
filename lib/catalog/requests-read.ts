@@ -59,6 +59,8 @@ export interface StudentRequestRow {
   book_id: string;
   title: string;
   author: string;
+  /** `books.cover_url` — thumbnail for the My Requests book rows (design §8). */
+  cover_url: string | null;
   status: RequestStatus;
   decline_reason: string | null;
   created_at: string;
@@ -337,7 +339,7 @@ export async function getStudentRequests(
   let builder = supabase
     .from("loan_requests")
     .select(
-      "id, book_id, status, decline_reason, created_at, decided_at, loan_id, book:books(title, author)",
+      "id, book_id, status, decline_reason, created_at, decided_at, loan_id, book:books(title, author, cover_url)",
       { count: "exact" },
     )
     .eq("student_id", studentId);
@@ -364,7 +366,7 @@ export async function getStudentRequests(
     created_at: string;
     decided_at: string | null;
     loan_id: string | null;
-    book: { title: string; author: string } | { title: string; author: string }[] | null;
+    book: { title: string; author: string; cover_url: string | null } | { title: string; author: string; cover_url: string | null }[] | null;
   }
 
   const rows: StudentRequestRow[] = ((data ?? []) as unknown as JoinedRow[]).map(
@@ -375,6 +377,7 @@ export async function getStudentRequests(
         book_id: row.book_id,
         title: book?.title ?? "",
         author: book?.author ?? "",
+        cover_url: book?.cover_url ?? null,
         status: toStatus(row.status),
         decline_reason: row.decline_reason,
         created_at: row.created_at,

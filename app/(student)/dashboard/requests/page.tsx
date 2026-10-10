@@ -30,12 +30,14 @@ type SearchParams = Promise<{
 /**
  * Student → My Requests (US-2 / FR-13, rules.md §4 R-12, design §6).
  *
- * One **stepper card** per request: Requested → Under review / Approved /
- * Declined (with reason) / Cancelled, timestamps in Asia/Manila (R-30), a
- * status pill on the design §2.1 color map, and a confirm-guarded Cancel for
- * still-PENDING rows. Reads run through `getStudentRequests` — RLS scopes
- * rows to the signed-in student (schema.md §4), so an admin previewing this
- * page sees their own (empty) list.
+ * One **book row** per request (cover + title/author + status pill); the
+ * Requested → Under review / Approved / Declined (with reason) / Cancelled
+ * stepper timeline renders only when the row is clicked open. Timestamps in
+ * Asia/Manila (R-30), a status pill on the design §2.1 color map, and a
+ * confirm-guarded Cancel for still-PENDING rows. Reads run through
+ * `getStudentRequests` — RLS scopes rows to the signed-in student
+ * (schema.md §4), so an admin previewing this page sees their own (empty)
+ * list.
  */
 export default async function StudentRequestsPage({
   searchParams,
@@ -139,7 +141,7 @@ export default async function StudentRequestsPage({
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {/* Stepper cards — design §6 (one per request, newest first) */}
+            {/* Book rows with expandable stepper details (one per request, newest first) */}
             <ul className="flex list-none flex-col gap-4 p-0">
               {rows.map((row) => (
                 <li key={row.id}>
