@@ -122,6 +122,7 @@ export interface FineCounts {
   /** Number of UNPAID fine rows. */
   unpaidCount: number;
   /** Sum of fines settled with `paid_at` inside the current Manila month. */
+  /** Cash payments this Manila month — REPLACEMENT settlements excluded. */
   paidThisMonth_centavos: number;
   /** Sum of fines waived with `waived_at` inside the current Manila month. */
   waivedThisMonth_centavos: number;
@@ -632,8 +633,11 @@ export async function getAdminFines(
  *
  * - `unpaidTotal_centavos` / `unpaidCount` — every UNPAID fine right now
  *   (R-27 school-wide balance);
- * - `paidThisMonth_centavos` — fines settled during the current **Manila**
- *   month (`paid_at` boundary, R-30);
+ * - `paidThisMonth_centavos` — **cash** payments during the current **Manila**
+ *   month (`paid_at` boundary + `paid_method = 'CASH'`, R-30). REPLACEMENT
+ *   settlements (student handed in a physical copy) are deliberately excluded:
+ *   no money was collected — "Collected this month" means cash in the drawer
+ *   (user request 2026-10-10).
  * - `waivedThisMonth_centavos` — fines waived this Manila month (`waived_at`);
  * - `studentsWithFines` — students with ≥ 1 UNPAID fine (the population the
  *   R-25 hard block currently applies to).
@@ -652,6 +656,7 @@ export async function getFineCounts(): Promise<FineCounts> {
       .from("fines")
       .select("amount_centavos")
       .eq("status", "PAID")
+      .eq("paid_method", "CASH") // cash in the drawer only — REPLACEMENT settles the fine but collects nothing
       .gte("paid_at", startIso)
       .lt("paid_at", endIso),
     supabase

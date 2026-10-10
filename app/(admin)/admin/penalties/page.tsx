@@ -57,10 +57,11 @@ const STATUS_LABELS: Record<FineStatus, string> = {
   WAIVED: "Waived",
 };
 
-/** Distinct type chips (design §2.1): OVERDUE = error text, DAMAGE = warning text. */
+/** Distinct type chips (design §2.1): OVERDUE/LOST = error text, DAMAGE = warning text. */
 const TYPE_CHIPS: Record<FineType, { label: string; tone: "error" | "warning" }> = {
   OVERDUE: { label: "Overdue", tone: "error" },
   DAMAGE: { label: "Damage", tone: "warning" },
+  LOST: { label: "Lost book", tone: "error" },
 };
 
 /** Everything the page renders, loaded together (one failed read = error UI). */
@@ -122,12 +123,12 @@ function emptyCopyFor(
     case "all":
       return {
         title: "No fines recorded yet.",
-        body: "Overdue and damage fines created by the system appear here.",
+        body: "Overdue, damage and lost-book fines created by the system appear here.",
       };
     default:
       return {
         title: "No unpaid fines — everything is settled.",
-        body: "New overdue or damage charges show up here the moment SQL records them.",
+        body: "New overdue, damage or lost charges show up here the moment SQL records them.",
       };
   }
 }
@@ -236,8 +237,8 @@ export default async function AdminPenaltiesPage({
                 data={[]}
               />
               <StatCard
-                title="Collected this month"
-                subtitle="Payments recorded in the current month"
+            title="Collected this month"
+            subtitle="Cash payments recorded this month — replacement copies are not cash"
                 value={formatPeso(data.counts.paidThisMonth_centavos)}
                 valueClassName="text-success-700"
                 data={[]}

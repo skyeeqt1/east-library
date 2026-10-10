@@ -6,13 +6,14 @@ import { cn, formatPeso } from "@/lib/utils";
 import type { FineStatus, FineType } from "@/lib/validations/fine";
 
 /**
- * Friendly label + tone per `fines.type` (design §2.1: OVERDUE = error
+ * Friendly label + tone per `fines.type` (design §2.1: OVERDUE/LOST = error
  * chip, DAMAGE = warning chip — deliberately distinct so a student can tell
  * at a glance *why* a charge exists).
  */
 const TYPE_META: Record<FineType, { label: string; tone: BadgeTone }> = {
   OVERDUE: { label: "Overdue", tone: "error" },
   DAMAGE: { label: "Damage", tone: "warning" },
+  LOST: { label: "Lost book", tone: "error" },
 };
 
 const STATUS_LABELS: Record<FineStatus, string> = {

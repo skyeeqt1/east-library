@@ -12,7 +12,8 @@ import type { FineStatus, FineType } from "@/lib/validations/fine";
  *   `paid`   → `status: 'PAID'`
  *   `waived` → `status: 'WAIVED'`
  *   `all`    → `status: 'all'` (UNPAID block first, then settled rows)
- * Type filter → `type: 'OVERDUE' | 'DAMAGE'` (R-18 / R-22), `all` → omitted.
+ * Type filter → `type: 'OVERDUE' | 'DAMAGE' | 'LOST'` (R-18 / R-22 / lost-book
+ * charges), `all` → omitted.
  */
 
 export const PENALTIES_PATH = "/admin/penalties";
@@ -23,8 +24,8 @@ export const PENALTIES_PER_PAGE = 25;
 /** Tab states for the fines queue. */
 export type PenaltiesStatusFilter = "unpaid" | "paid" | "waived" | "all";
 
-/** Type pills — "All types" keeps both R-18 OVERDUE and R-22 DAMAGE rows. */
-export type PenaltiesTypeFilter = "all" | "OVERDUE" | "DAMAGE";
+/** Type pills — "All types" keeps R-18 OVERDUE, R-22 DAMAGE and LOST rows. */
+export type PenaltiesTypeFilter = "all" | "OVERDUE" | "DAMAGE" | "LOST";
 
 export interface PenaltiesQuery {
   status: PenaltiesStatusFilter;
@@ -60,7 +61,9 @@ export function parsePenaltiesQuery(raw: {
 
   const typeValue = (first(raw.type) ?? "").toUpperCase();
   const type: PenaltiesTypeFilter =
-    typeValue === "OVERDUE" || typeValue === "DAMAGE" ? typeValue : "all";
+    typeValue === "OVERDUE" || typeValue === "DAMAGE" || typeValue === "LOST"
+      ? typeValue
+      : "all";
 
   const q = (first(raw.q) ?? "").trim().slice(0, 80);
 

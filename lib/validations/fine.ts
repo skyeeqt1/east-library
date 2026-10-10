@@ -134,7 +134,7 @@ export function isFineStatus(value: string): value is FineStatus {
 }
 
 /** `fines.type` values — schema.md §2.6 (R-18 OVERDUE, R-22 DAMAGE). */
-export const FINE_TYPES = ["OVERDUE", "DAMAGE"] as const;
+export const FINE_TYPES = ["OVERDUE", "DAMAGE", "LOST"] as const;
 
 export type FineType = (typeof FINE_TYPES)[number];
 

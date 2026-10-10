@@ -23,6 +23,7 @@ export interface PayableFine {
 const TYPE_LABELS: Record<FineType, string> = {
   OVERDUE: "Overdue",
   DAMAGE: "Damage",
+  LOST: "Lost book",
 };
 
 /**
@@ -168,7 +169,7 @@ export function RecordPaymentButton({ fine }: { fine: PayableFine }) {
                 {
                   value: "REPLACEMENT",
                   label: "Book replaced",
-                  hint: "A replacement copy was received for the damaged book (R-22).",
+                  hint: "A replacement copy was received for the damaged or lost book — it goes straight back into circulation.",
                 },
               ] as const
             ).map((option) => {

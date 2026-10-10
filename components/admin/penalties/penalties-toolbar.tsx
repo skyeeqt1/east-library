@@ -68,7 +68,7 @@ export function PenaltiesToolbar({ status, type, q }: PenaltiesToolbarProps) {
       />
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        {/* Type pills — R-18 OVERDUE vs R-22 DAMAGE */}
+        {/* Type pills — R-18 OVERDUE, R-22 DAMAGE, lost-book charges */}
         <Tabs
           aria-label="Filter fines by type"
           activeId={type}
@@ -77,6 +77,7 @@ export function PenaltiesToolbar({ status, type, q }: PenaltiesToolbarProps) {
             { id: "all", label: "All types" },
             { id: "OVERDUE", label: "Overdue" },
             { id: "DAMAGE", label: "Damage" },
+            { id: "LOST", label: "Lost" },
           ]}
         />
 

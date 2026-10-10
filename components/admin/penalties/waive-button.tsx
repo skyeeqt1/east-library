@@ -30,6 +30,7 @@ const REASON_MAX = 300;
 const TYPE_LABELS: Record<FineType, string> = {
   OVERDUE: "Overdue",
   DAMAGE: "Damage",
+  LOST: "Lost book",
 };
 
 /**

@@ -46,10 +46,11 @@ type SearchParams = Promise<{
   tab?: string | string[];
 }>;
 
-/** Distinct type chips (design §2.1): OVERDUE = error text, DAMAGE = warning. */
+/** Distinct type chips (design §2.1): OVERDUE/LOST = error text, DAMAGE = warning. */
 const FINE_TYPE_CHIPS: Record<FineType, { label: string; tone: BadgeTone }> = {
   OVERDUE: { label: "Overdue", tone: "error" },
   DAMAGE: { label: "Damage", tone: "warning" },
+  LOST: { label: "Lost book", tone: "error" },
 };
 
 /** "2026-10-08" → "October 8, 2026" for the header's as-of line (R-30). */
