@@ -137,6 +137,10 @@ export type SettleFineMode =
 /** What `settleFinePayment()` found / did. */
 export interface SettleFineResult {
   fineId: string;
+  /** The fine's loan (null for manual/admin fines) — lets callers reach the
+   *  physical copy (e.g. record payment returning a DAMAGED/LOST copy to
+   *  circulation, mirroring resolveDamage). */
+  loanId: string | null;
   /** Row status AFTER the call: `"PAID"`, `"WAIVED"`, or the pre-existing
    *  settled status when `wasUnpaid` is false. */
   status: FineStatus;
@@ -187,7 +191,7 @@ export async function settleFinePayment(
   /* ---- 1. locate the fine ------------------------------------------ */
   let lookup = supabase
     .from("fines")
-    .select("id, student_id, status, amount_centavos, paid_method");
+    .select("id, student_id, loan_id, status, amount_centavos, paid_method");
   lookup =
     "fineId" in target
       ? lookup.eq("id", target.fineId)
@@ -197,6 +201,10 @@ export async function settleFinePayment(
   if (!fine) return { ok: false, code: "not_found" };
 
   const fineId = String(fine.id);
+  const fineLoanId =
+    fine.loan_id === null || fine.loan_id === undefined
+      ? null
+      : String(fine.loan_id);
   const amountCentavos = Number(fine.amount_centavos ?? 0);
   const rowStatus: FineStatus = isFineStatus(String(fine.status))
     ? (String(fine.status) as FineStatus)
@@ -211,6 +219,7 @@ export async function settleFinePayment(
     ok: true,
     result: {
       fineId,
+      loanId: fineLoanId,
       status: rowStatus,
       paidMethod: rowMethod,
       amountCentavos,
@@ -263,6 +272,7 @@ export async function settleFinePayment(
       ok: true,
       result: {
         fineId,
+        loanId: fineLoanId,
         status: winnerStatus,
         paidMethod: FINE_PAYMENT_METHODS.includes(
           String(winner.paid_method) as FinePaymentMethod,
@@ -292,6 +302,7 @@ export async function settleFinePayment(
     ok: true,
     result: {
       fineId,
+      loanId: fineLoanId,
       status,
       paidMethod: mode.kind === "PAY" ? mode.method : null,
       amountCentavos,

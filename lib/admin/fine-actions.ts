@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { assertAdmin } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { fieldErrorsFromZod } from "@/lib/validations/auth";
@@ -91,7 +92,31 @@ export async function recordFinePayment(
     return { ok: false, error: FINE_MESSAGES.alreadySettled };
   }
 
+  /* ---- return the physical copy to circulation (user request — mirrors
+     resolveDamage's R-23 interpretation): a settled DAMAGE/LOST fine means
+     the student has replaced or paid for the book, so the copy slot is back
+     in stock — Books shows 2/2 again instead of 1/2. The status guard is
+     critical: an early OVERDUE payment on an active loan must NEVER flip an
+     ON_LOAN copy (R-07). Best-effort: the payment itself already stuck, and
+     a copy can still be corrected manually on the Books page. */
+  if (outcome.result.loanId) {
+    const { data: loan } = await supabase
+      .from("loans")
+      .select("copy_id")
+      .eq("id", outcome.result.loanId)
+      .maybeSingle();
+    if (loan?.copy_id) {
+      await supabase
+        .from("book_copies")
+        .update({ status: "AVAILABLE" })
+        .eq("id", loan.copy_id)
+        .in("status", ["DAMAGED", "LOST"]);
+    }
+  }
+
   revalidateFinePaths();
+  // The copy status feeds the Books inventory counts.
+  revalidatePath("/admin/books");
   return {
     ok: true,
     data: {
