@@ -1,11 +1,12 @@
 import { Badge, toneForStatus } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Check, Clock, TriangleAlert } from "lucide-react";
+import { Check, Clock, Info, TriangleAlert } from "lucide-react";
 import {
   CountdownChip,
   countdownFor,
   withOwedAmount,
 } from "@/components/student/countdown-chip";
+import { ReturnBookButton } from "@/components/student/return-book-button";
 import type { StudentLoanRow } from "@/lib/catalog/loans-read";
 import { formatPeso } from "@/lib/utils";
 import type { LoanStatus } from "@/lib/validations/loan";
@@ -40,23 +41,17 @@ function initialsOf(title: string): string {
 }
 
 /**
- * Due countdown chip — design §6 colours, resolved by the shared
- * `components/student/countdown-chip.tsx` so the loans page, the dashboard's
- * "My active loans" cards and the dashboard hero card all follow the exact
- * same rule (green >3d · orange 1–3d · red due-today/overdue, clock icon,
- * day figure in the text). The red chip additionally carries the **live ₱
- * owed** when an UNPAID fine row exists (`withOwedAmount`); a loan that went
- * overdue since the last daily sweep has no fine row yet, so the card shows
- * the "fines update daily" note below instead of an amount.
- */
-
-/**
- * One loan as a countdown card (design §6 — card-based, countdown-first:
- * cover initials · title/author · barcode · Released · big Due date + chip ·
- * status pill · live ₱ owed).
+ * One loan as a compact list row (design §6 — dense single-line layout):
  *
- * Server component: everything rendered here is plain row data — only the
- * mutation buttons elsewhere in the app are client code.
+ *   [AB]  A Brief History of Time                    ● Active   [Return book]
+ *         Stephen W. Hawking · ESCR-EF0322-001
+ *         Released Oct 10, 2026 · Due Oct 17, 2026 · ⏱ 7 days left
+ *
+ * Countdown colours come from the shared `countdown-chip` rule (green >3d ·
+ * orange 1–3d · red due-today/overdue with the live ₱ owed when an UNPAID
+ * fine exists). Status pills, the Return button / "Return requested" chip and
+ * any fine notices sit in the same row or as compact strips below it — no
+ * floating whitespace. Server component: plain row data, no client code.
  */
 export function LoanCard({ row }: { row: StudentLoanRow }) {
   const fine = row.fine;
@@ -67,107 +62,132 @@ export function LoanCard({ row }: { row: StudentLoanRow }) {
     row.days_late !== undefined &&
     row.days_late > 0 &&
     fine === null;
+  const isOpen = row.status !== "RETURNED";
+  /** A compact strip under the row — only when there is something to say. */
+  const hasStrip =
+    row.condition_on_return === "DAMAGED" ||
+    fine !== null ||
+    overdueWithoutFine ||
+    (row.status === "RETURNED" && row.returned_at !== null);
 
   return (
     <Card padded={false}>
-      <div className="flex gap-4 p-5 sm:p-6">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
         {/* Cover placeholder — violet block with title initials (design §8) */}
         <span
           aria-hidden="true"
-          className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-sm font-semibold text-primary-700"
+          className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-sm font-semibold text-primary-700"
         >
           {initialsOf(row.title)}
         </span>
 
-        <div className="min-w-0 flex-1">
-          {/* Header: title/author + status pill (design §2.1 status → color) */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-gray-900">{row.title}</h3>
-              <p className="mt-0.5 truncate text-xs text-gray-500">
-                {row.author}
-              </p>
-              {row.barcode ? (
-                <p className="mt-0.5 font-mono text-xs text-gray-500">
-                  {row.barcode}
-                </p>
-              ) : null}
-            </div>
-            <Badge tone={toneForStatus(row.status)}>
-              {STATUS_LABELS[row.status]}
-            </Badge>
-          </div>
+        {/* Title / author / barcode */}
+        <div className="min-w-0 flex-1 basis-48">
+          <h3 className="truncate text-sm font-semibold text-gray-900">
+            {row.title}
+          </h3>
+          <p className="truncate text-xs text-gray-500">
+            {row.author}
+            {row.barcode ? (
+              <span className="ml-1.5 font-mono">{row.barcode}</span>
+            ) : null}
+          </p>
+        </div>
 
-          {/* Released / Due + the countdown chip */}
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-medium text-gray-500">Released</p>
-              <p className="mt-0.5 text-sm text-gray-700">
-                {formatDate(row.released_at)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500">Due</p>
-              <p className="mt-0.5 text-lg font-semibold tracking-tight text-gray-900">
-                {formatDate(row.due_date)}
-              </p>
-              {countdown ? (
-                <CountdownChip countdown={countdown} className="mt-1.5" />
-              ) : null}
-            </div>
-          </div>
+        {/* Released — compact label/value pair (hidden on the narrowest screens) */}
+        <div className="hidden items-baseline gap-1.5 sm:flex">
+          <span className="text-xs font-medium text-gray-500">Released</span>
+          <span className="text-sm text-gray-700">
+            {formatDate(row.released_at)}
+          </span>
+        </div>
 
+        {/* Due — label/value pair + the live countdown chip on the same line */}
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-xs font-medium text-gray-500">Due</span>
+          <span className="text-sm font-semibold text-gray-900">
+            {formatDate(row.due_date)}
+          </span>
+        </div>
+        {countdown ? <CountdownChip countdown={countdown} /> : null}
+
+        {/* Status pill + row action (early return / requested chip) */}
+        <div className="ml-auto flex items-center gap-2">
+          <Badge tone={toneForStatus(row.status)}>
+            {STATUS_LABELS[row.status]}
+          </Badge>
+          {isOpen ? (
+            row.return_requested_at ? (
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-info-500/30 bg-info-25 px-2 py-1 text-xs font-medium text-info-700">
+                <Info className="size-3.5 shrink-0" aria-hidden="true" />
+                Return requested
+              </span>
+            ) : (
+              <ReturnBookButton loanId={row.id} title={row.title} />
+            )
+          ) : null}
+        </div>
+      </div>
+
+      {/* Compact strips: return receipt · damage · fine state (design §6/§8) */}
+      {hasStrip ? (
+        <div className="flex flex-col gap-2 border-t border-gray-100 px-4 py-3 text-xs sm:text-sm">
           {row.status === "RETURNED" && row.returned_at ? (
-            <p className="mt-3 text-xs text-gray-500">
-              Returned {formatDate(row.returned_at)}
-              {row.condition_on_return === "DAMAGED" ? " · Condition: Damaged" : null}
+            <p className="text-gray-500">
+              {row.condition_on_return === "LOST"
+                ? `Marked lost ${formatDate(row.returned_at)} — replacement charge on My Penalties.`
+                : `Returned ${formatDate(row.returned_at)}${
+                    row.condition_on_return === "DAMAGED"
+                      ? " · Condition: Damaged"
+                      : ""
+                  }`}
             </p>
           ) : null}
 
           {/* Phase 5 (FR-18) — a damaged return still owes a resolution */}
           {row.condition_on_return === "DAMAGED" ? (
-            <div className="mt-3 flex items-start gap-2 rounded-md border border-warning-500/40 bg-warning-25 px-3 py-2 text-sm font-medium text-warning-700">
+            <p className="flex items-start gap-2 font-medium text-warning-700">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               <span>
                 This book was returned as DAMAGED — replacement/payment pending.
               </span>
-            </div>
+            </p>
           ) : null}
 
           {/* Live ₱ owed — UNPAID warns in error red, PAID confirms in green */}
           {fine && fine.status === "UNPAID" ? (
-            <div className="mt-3 flex items-start gap-2 rounded-md border border-error-500/30 bg-error-25 px-3 py-2 text-sm font-medium text-error-700">
+            <p className="flex items-start gap-2 font-medium text-error-700">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               <span>
                 {`Overdue fine: ${formatPeso(fine.amount_centavos)} (${
                   fine.days_late ?? row.days_late ?? 0
                 } ${(fine.days_late ?? row.days_late ?? 0) === 1 ? "day" : "days"}) — settle at the library`}
               </span>
-            </div>
+            </p>
           ) : fine && fine.status === "PAID" ? (
-            <div className="mt-3 flex items-center gap-2 rounded-md border border-success-500/30 bg-success-25 px-3 py-2 text-sm font-medium text-success-700">
+            <p className="flex items-center gap-2 font-medium text-success-700">
               <Check className="size-4 shrink-0" aria-hidden="true" />
               <span>
                 {`Overdue fine: ${formatPeso(fine.amount_centavos)} — Paid`}
               </span>
-            </div>
+            </p>
           ) : fine ? (
-            <div className="mt-3 flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700">
+            <p className="flex items-center gap-2 font-medium text-gray-700">
               <Check className="size-4 shrink-0" aria-hidden="true" />
               <span>
                 {`Overdue fine: ${formatPeso(fine.amount_centavos)} — Waived`}
               </span>
-            </div>
+            </p>
           ) : overdueWithoutFine ? (
             // R-18: fines are upserted by the daily sweep — same-day overdue
             // has no amount yet, so say that instead of showing a fake ₱0.
-            <div className="mt-3 flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700">
+            <p className="flex items-center gap-2 font-medium text-gray-700">
               <Clock className="size-4 shrink-0" aria-hidden="true" />
               <span>No fine recorded yet — overdue fines update daily.</span>
-            </div>
+            </p>
           ) : null}
         </div>
-      </div>
+      ) : null}
     </Card>
   );
 }

@@ -62,8 +62,9 @@ sparklines, tab pills, paginated data table — see project reference image).
 |---|---|---|
 | Pending / Requested | `warning` | 🟠 orange pill |
 | Approved | `info` | 🔵 blue pill |
-| Borrowed out / Active | `primary` | 🔴 seal-red pill |
-| Returned / Paid | `success` | 🟢 green pill |
+| Borrowed out / Active | `success` | 🟢 green pill *(rev. — was `primary` seal-red; brand red read as an error, user request 2026-10-10)* |
+| Returned | `gray` | ⚫ gray pill *(rev. — moved off `success` so Returned stays distinguishable from Active)* |
+| Paid fine | `success` | 🟢 green pill |
 | Overdue / Unpaid fine | `error` | 🔴 red pill |
 | Declined / Blocked / Damaged | `gray-700` | ⚫ gray pill |
 
@@ -124,7 +125,10 @@ One mechanism covers every switch: `PageTransition` re-runs the marker
 (`'restart'` mode — beats replay from 0) on every pathname change
 (fresh template mount or in-place RSC patch) and replays the wipe for
 same-path patches (its MutationObserver) — search, tab and filter
-updates never re-trigger the cascade. Query-only template remounts
+updates never re-trigger the cascade. Mutations that stay **inside a
+`<form>`** (pending spinners, button label swaps, error alerts, field
+errors) are exempt from the replay — form feedback must never flash
+the page (login Enter). Query-only template remounts
 (Next remounts templates on `searchParams` changes too) are detected
 via `lastPathname` and do not arm. Pages opt in with the
 `.escr-landing-page` class on their root (every app page has it;

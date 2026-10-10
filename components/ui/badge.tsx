@@ -32,17 +32,22 @@ const DOT_CLASSES: Record<BadgeTone, string> = {
 
 /**
  * Status → tone mapping (design.md §2.1 table):
- *   Pending/Requested = warning · Approved = info · Active loan = primary
- *   Returned/Paid = success · Overdue/Unpaid = error
+ *   Pending/Requested = warning · Approved = info · Active loan = success
+ *   Overdue/Unpaid = error · Returned/Paid = history/success
  *   Declined/Blocked/Damaged = gray-700
+ *
+ * Note: ACTIVE is deliberately **success green** (user request — an active
+ * loan in good standing should read positive, and the brand primary is red
+ * which looked like an error). RETURNED moved to gray so it stays
+ * distinguishable from Active; Paid stays green (money settled).
  */
 const STATUS_TONES: Record<string, BadgeTone> = {
   pending: "warning",
   requested: "warning",
   approved: "info",
-  active: "primary",
-  "active loan": "primary",
-  returned: "success",
+  active: "success",
+  "active loan": "success",
+  returned: "gray",
   paid: "success",
   overdue: "error",
   "overdue loan": "error",

@@ -32,9 +32,10 @@ type SearchParams = Promise<{
  *
  * Two tabs driven by the URL: **Active & due** (open loans — ACTIVE +
  * OVERDUE together, most urgent first) and **History** (RETURNED, newest
- * first). Rows arrive as **countdown cards**, not a table: cover initials,
- * title/author/barcode, Released, a big Due date with the design §6 chip
- * (green >3 days · orange 1–3 · red due-today/overdue) and the live ₱ owed.
+ * first). Rows are **compact countdown lines**: cover initials,
+ * title/author/barcode, Released, Due + the design §6 chip (green >3 days ·
+ * orange 1–3 · red due-today/overdue), status pill and the early-return
+ * action — dense single-line layout, fine notices as thin strips below.
  *
  * Reads go through `getStudentLoans` — RLS scopes the query to the
  * signed-in student (schema.md §4), so this page can never leak another
