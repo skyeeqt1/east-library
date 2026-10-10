@@ -49,10 +49,22 @@ export const returnLoanSchema = z.object({
   condition: z.enum(["GOOD", "DAMAGED"]),
 });
 
+/**
+ * Mark an open loan's book as LOST (user request, FR-18 extension): closes
+ * the loan with condition LOST, flags the copy LOST and charges a LOST fine
+ * at the book's replacement value — all inside `mark_loan_lost()` in SQL
+ * (migration 0010). Admin-only, amount never accepted from the client (R-29).
+ */
+export const markLostSchema = z.object({
+  loanId: z.string().uuid(),
+});
+
 /** Parsed (DB-ready) release payload. */
 export type ReleaseLoanInput = z.infer<typeof releaseLoanSchema>;
 /** Parsed (DB-ready) return payload. */
 export type ReturnLoanInput = z.infer<typeof returnLoanSchema>;
+/** Parsed (DB-ready) mark-lost payload. */
+export type MarkLostInput = z.infer<typeof markLostSchema>;
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -105,6 +117,16 @@ export interface ReturnLoanResult {
   daysLate: number;
   fineAmount: number;
   fineCreated: boolean;
+}
+
+/**
+ * `data` returned by a successful `markLoanLost` — the closed loan's id plus
+ * the LOST fine in **integer centavos** (R-29), read back from SQL after the
+ * write (TS never computes the amount, R-14/R-29).
+ */
+export interface MarkLostResult {
+  loanId: string;
+  fineAmount: number;
 }
 
 /**
@@ -163,4 +185,7 @@ export const LOAN_MESSAGES = {
   /** RPC failed for an unexpected reason (mapped SQL text wins when present). */
   releaseFailed: "Could not release the loan. Please try again.",
   returnFailed: "Could not record the return. Please try again.",
+  markLostFailed: "Could not mark the book as lost. Please try again.",
+  /** Mark lost: the book has no `replacement_value_centavos` (SQL guard). */
+  noReplacementValue: "This book has no replacement value set.",
 } as const;

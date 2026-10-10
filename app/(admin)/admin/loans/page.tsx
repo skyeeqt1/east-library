@@ -23,6 +23,7 @@ import {
   parseLoansQuery,
 } from "@/components/admin/loans/loans-query";
 import { ReturnButton } from "@/components/admin/loans/return-button";
+import { MarkLostButton } from "@/components/admin/loans/mark-lost-button";
 import {
   getAdminActiveLoans,
   getLoanCounts,
@@ -308,10 +309,19 @@ export default async function AdminLoansPage({
                         <Badge tone={toneForStatus(row.status)}>
                           {STATUS_LABELS[row.status]}
                         </Badge>
+                        {/* Student tapped "Return book" (migration 0009) —
+                            bring-the-desk flag; the librarian still confirms
+                            the return via "Mark returned". */}
+                        {row.return_requested_at ? (
+                          <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-info-500/30 bg-info-25 px-2 py-0.5 text-xs font-medium text-info-700">
+                            <ArrowLeftRight className="size-3 shrink-0" aria-hidden="true" />
+                            Return requested
+                          </span>
+                        ) : null}
                       </Td>
                       <Td>
                         {row.status !== "RETURNED" ? (
-                          <div className="flex justify-end">
+                          <div className="flex justify-end gap-2">
                             <ReturnButton
                               loan={{
                                 id: row.id,
@@ -321,6 +331,16 @@ export default async function AdminLoansPage({
                                 student_name: row.student_name,
                                 student_number: row.student_number,
                                 due_date: row.due_date,
+                              }}
+                            />
+                            <MarkLostButton
+                              loan={{
+                                id: row.id,
+                                title: row.title,
+                                student_name: row.student_name,
+                                student_number: row.student_number,
+                                replacement_value_centavos:
+                                  row.replacement_value_centavos,
                               }}
                             />
                           </div>

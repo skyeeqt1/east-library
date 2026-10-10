@@ -7,9 +7,11 @@ import { fieldErrorsFromZod } from "@/lib/validations/auth";
 import { daysSince } from "@/lib/catalog/loans-read";
 import {
   LOAN_MESSAGES,
+  markLostSchema,
   releaseLoanSchema,
   returnLoanSchema,
   type LoanActionResult,
+  type MarkLostResult,
   type ReleaseCandidates,
   type ReleaseLoanResult,
   type ReturnLoanResult,
@@ -51,7 +53,9 @@ import type { RequestStatus } from "@/lib/validations/request";
 const LOAN_PATHS = [
   "/admin/requests",
   "/admin/loans",
+  "/admin/penalties",
   "/dashboard/loans",
+  "/dashboard/penalties",
   "/dashboard",
 ] as const;
 
@@ -281,6 +285,88 @@ export async function returnLoan(
       daysLate,
       fineAmount: fine ? Number(fine.amount_centavos ?? 0) : 0,
       fineCreated: Boolean(fine),
+    },
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Mark lost (FR-18 extension — lost books never come back)             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Mark an open loan's book as lost (user request): the physical copy never
+ * returns, so the damage-assessment flow (which needs a RETURNED+DAMAGED
+ * loan) can never charge the student. Calls `mark_loan_lost()` in SQL
+ * (migration 0010 — same single-source-of-truth pattern as `record_return`):
+ * closes the loan with condition LOST, flags the copy LOST, creates a LOST
+ * fine at the book's replacement value (R-08 basis, read in SQL — R-29: the
+ * amount is never accepted from the client) and writes the MARK_LOST audit
+ * row (R-32). The fine then flows through the existing Penalties pay/waive
+ * pipeline like any other.
+ *
+ * Pre-checks (deterministic messages before the RPC):
+ *   - loan missing        → 'Loan not found.'
+ *   - `returned_at` set   → 'This loan is already closed.' (E6 — second
+ *                            admin loses; the RPC re-guards under row lock)
+ */
+export async function markLoanLost(
+  input: unknown,
+): Promise<LoanActionResult<MarkLostResult>> {
+  await assertAdmin();
+
+  const parsed = markLostSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, fieldErrors: fieldErrorsFromZod(parsed.error) };
+  }
+  const { loanId } = parsed.data;
+
+  const supabase = await createClient();
+
+  /* ---- pre-check the loan state (E6: already closed loses cleanly) - */
+  const { data: loan, error: lookupError } = await supabase
+    .from("loans")
+    .select("id, returned_at")
+    .eq("id", loanId)
+    .maybeSingle();
+  if (lookupError) {
+    return { ok: false, error: LOAN_MESSAGES.loadLoanFailed };
+  }
+  if (!loan) return { ok: false, error: LOAN_MESSAGES.loanNotFound };
+  if (loan.returned_at) {
+    return { ok: false, error: LOAN_MESSAGES.alreadyReturned };
+  }
+
+  /* ---- the single source of truth: mark_loan_lost() in SQL ---------- */
+  const { data: lostId, error: rpcError } = await supabase.rpc(
+    "mark_loan_lost",
+    { p_loan_id: loanId },
+  );
+  if (rpcError || !lostId) {
+    const mapped = extractSqlErrorMessage(rpcError, LOAN_MESSAGES.markLostFailed);
+    return {
+      ok: false,
+      error: /replacement value/i.test(mapped)
+        ? LOAN_MESSAGES.noReplacementValue
+        : mapped,
+    };
+  }
+
+  /* ---- report the fine SQL finalized (display only — R-29) --------- */
+  const { data: fine } = await supabase
+    .from("fines")
+    .select("amount_centavos")
+    .eq("loan_id", loanId)
+    .eq("type", "LOST")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  revalidateLoanPaths();
+  return {
+    ok: true,
+    data: {
+      loanId,
+      fineAmount: fine ? Number(fine.amount_centavos ?? 0) : 0,
     },
   };
 }
