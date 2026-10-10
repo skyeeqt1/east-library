@@ -1,3 +1,4 @@
+import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -5,6 +6,7 @@ import {
   countdownFor,
   withOwedAmount,
 } from "@/components/student/countdown-chip";
+import { ReturnBookButton } from "@/components/student/return-book-button";
 import type { StudentLoanRow } from "@/lib/catalog/loans-read";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en-PH", {
@@ -62,6 +64,14 @@ export function DashboardLoanCard({ row }: { row: StudentLoanRow }) {
 
         <div className="flex items-center gap-3">
           {countdown ? <CountdownChip countdown={countdown} /> : null}
+          {row.return_requested_at ? (
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-info-500/30 bg-info-25 px-2 py-1 text-xs font-medium text-info-700">
+              <Info className="size-3.5 shrink-0" aria-hidden="true" />
+              Return requested
+            </span>
+          ) : (
+            <ReturnBookButton loanId={row.id} title={row.title} />
+          )}
           <Button size="sm" variant="secondary" href="/dashboard/loans">
             View details
           </Button>

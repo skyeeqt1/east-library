@@ -158,9 +158,14 @@ export interface AdminLoanRow {
   title: string;
   author: string;
   barcode: string | null;
+  /** Book's replacement value (centavos, R-08) — the Mark-lost charge basis. */
+  replacement_value_centavos: number;
   released_at: string;
   due_date: string;
   returned_at: string | null;
+  /** Student tapped "Return book" — shown as a "Return requested" chip in
+   *  the Borrowed table (migration 0009). */
+  return_requested_at: string | null;
   status: LoanStatus;
   /** Whole days left on an open loan (due_date − today); absent when past due
    *  or when the loan is already RETURNED. */
@@ -189,6 +194,9 @@ export interface StudentLoanRow {
   released_at: string;
   due_date: string;
   returned_at: string | null;
+  /** Student tapped "Return book" (early-return signal, migration 0009) —
+   *  the desk still confirms receipt via the normal return flow. */
+  return_requested_at: string | null;
   condition_on_return: string | null;
   status: LoanStatus;
   days_remaining?: number;
@@ -441,9 +449,9 @@ export async function getAdminActiveLoans(
   let builder = supabase
     .from("loans")
     .select(
-      `id, student_id, book_id, copy_id, released_at, due_date, returned_at, status,
+      `id, student_id, book_id, copy_id, released_at, due_date, returned_at, return_requested_at, status,
        student:profiles!loans_student_id_fkey(full_name, student_id, course_section),
-       book:books(title, author),
+       book:books(title, author, replacement_value_centavos),
        copy:book_copies!loans_copy_id_fkey(barcode)`,
       { count: "exact" },
     );
@@ -479,12 +487,13 @@ export async function getAdminActiveLoans(
     released_at: string;
     due_date: string;
     returned_at: string | null;
+    return_requested_at: string | null;
     status: string;
     student:
       | { full_name: string; student_id: string | null; course_section: string | null }
       | { full_name: string; student_id: string | null; course_section: string | null }[]
       | null;
-    book: { title: string; author: string } | { title: string; author: string }[] | null;
+    book: { title: string; author: string; replacement_value_centavos: number } | { title: string; author: string; replacement_value_centavos: number }[] | null;
     copy: { barcode: string | null } | { barcode: string | null }[] | null;
   }
 
@@ -504,9 +513,11 @@ export async function getAdminActiveLoans(
         title: book?.title ?? "",
         author: book?.author ?? "",
         barcode: copy?.barcode ?? null,
+        replacement_value_centavos: Number(book?.replacement_value_centavos ?? 0),
         released_at: row.released_at,
         due_date: row.due_date,
         returned_at: row.returned_at,
+        return_requested_at: row.return_requested_at ?? null,
         status,
         ...computeDayFields(row.due_date, status, row.returned_at),
       };
@@ -556,7 +567,7 @@ export async function getStudentLoans(
     .from("loans")
     .select(
       `id, book_id, copy_id, released_at, due_date, returned_at,
-       condition_on_return, status,
+       return_requested_at, condition_on_return, status,
        book:books(title, author),
        copy:book_copies!loans_copy_id_fkey(barcode),
        fines(type, amount_centavos, days_late, status, created_at)`,
@@ -592,6 +603,7 @@ export async function getStudentLoans(
     released_at: string;
     due_date: string;
     returned_at: string | null;
+    return_requested_at: string | null;
     condition_on_return: string | null;
     status: string;
     book: { title: string; author: string } | { title: string; author: string }[] | null;
@@ -613,6 +625,7 @@ export async function getStudentLoans(
         released_at: row.released_at,
         due_date: row.due_date,
         returned_at: row.returned_at,
+        return_requested_at: row.return_requested_at ?? null,
         condition_on_return: row.condition_on_return,
         status,
         ...computeDayFields(row.due_date, status, row.returned_at),
