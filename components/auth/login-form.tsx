@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { login, type LoginState } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,18 @@ import { PasswordField } from "@/components/auth/password-field";
  * • On success the action returns the role home and we `router.replace`
  *   it (FR-03) — replacing keeps /login out of the back history so
  *   BACK from the dashboard doesn't bounce through middleware.
+ * • Failed attempt (FR-03 retry ergonomics): React resets the form when a
+ *   server action settles, which also wiped the identifier and dropped focus
+ *   to <body>. The identifier is now controlled so it survives; the password
+ *   is intentionally left to the reset (a wrong password should never be
+ *   retained) and focus lands back on it for an immediate retry.
  * • No sign-up / register / reset link exists anywhere on this page.
  */
 export function LoginForm() {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
+  // Controlled so the reset React runs after the action cannot erase it.
+  const [identifier, setIdentifier] = useState("");
   const [state, formAction, pending] = useActionState<LoginState | null, FormData>(
     login,
     null,
@@ -35,8 +43,22 @@ export function LoginForm() {
     if (state?.redirect) router.replace(state.redirect);
   }, [state, router]);
 
+  // Failure: put the caret back in the password box (state identity changes
+  // exactly once per settled attempt, so this fires per attempt, not render).
+  useEffect(() => {
+    if (!state?.error || state.redirect) return;
+    formRef.current
+      ?.querySelector<HTMLInputElement>('input[type="password"]')
+      ?.focus();
+  }, [state]);
+
   return (
-    <form action={formAction} noValidate className="flex flex-col gap-5">
+    <form
+      ref={formRef}
+      action={formAction}
+      noValidate
+      className="flex flex-col gap-5"
+    >
       {state?.error ? (
         <div
           role="alert"
@@ -58,6 +80,8 @@ export function LoginForm() {
         required
         error={identifierError}
         disabled={pending}
+        value={identifier}
+        onChange={(event) => setIdentifier(event.target.value)}
       />
 
       <PasswordField

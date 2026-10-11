@@ -107,7 +107,8 @@ loan_requests ────► loans ◄──── book_copies ◄──── 
 | released_at | timestamptz default now() | |
 | due_date | date NOT NULL | = release date + 7 (R-14, R-17) |
 | returned_at | timestamptz NULL | |
-| condition_on_return | text NULL | `GOOD` \| `DAMAGED` |
+| return_requested_at | timestamptz NULL | 0009 — student tapped "Return book"; intent flag only, never closes the loan |
+| condition_on_return | text NULL | `GOOD` \| `DAMAGED` \| `LOST` (LOST set by mark-lost, 0010) |
 | status | text | `ACTIVE` \| `OVERDUE` \| `RETURNED` |
 | released_by / returned_to | uuid FK→profiles | admin actors |
 
@@ -117,7 +118,7 @@ loan_requests ────► loans ◄──── book_copies ◄──── 
 | id | uuid PK | |
 | student_id | uuid FK→profiles | who pays |
 | loan_id | uuid FK→loans NULL | NULL allowed for admin-created adjustments |
-| type | text | `OVERDUE` \| `DAMAGE` |
+| type | text | `OVERDUE` \| `DAMAGE` \| `LOST` (LOST = replacement value, 0010) |
 | days_late | int NULL | for OVERDUE |
 | amount_centavos | int NOT NULL CHECK (≥ 0) | |
 | status | text | `UNPAID` \| `PAID` \| `WAIVED` |
@@ -238,7 +239,8 @@ create table public.loans (
   released_at         timestamptz not null default now(),
   due_date            date not null,
   returned_at         timestamptz,
-  condition_on_return text check (condition_on_return in ('GOOD','DAMAGED')),
+  return_requested_at timestamptz,   -- 0009: student intent flag, not a close
+  condition_on_return text check (condition_on_return in ('GOOD','DAMAGED','LOST')),
   status              text not null default 'ACTIVE'
                       check (status in ('ACTIVE','OVERDUE','RETURNED')),
   released_by         uuid references public.profiles(id),
@@ -258,7 +260,7 @@ create table public.fines (
   id                uuid primary key default gen_random_uuid(),
   student_id        uuid not null references public.profiles(id),
   loan_id           uuid references public.loans(id),
-  type              text not null check (type in ('OVERDUE','DAMAGE')),
+  type              text not null check (type in ('OVERDUE','DAMAGE','LOST')),
   days_late         int check (days_late is null or days_late >= 0),
   amount_centavos   int not null check (amount_centavos >= 0),
   status            text not null default 'UNPAID'
@@ -574,12 +576,46 @@ returns boolean language sql stable security definer set search_path = public as
 $$;
 ```
 
+### 7.4 Return request + mark lost (0009 / 0010)
+
+Two later migrations extend `loans` / `fines` without touching custody rules:
+
+```sql
+-- 0009 — the only way a student write touches `loans`.
+-- SECURITY DEFINER; ownership and state re-checked in SQL, so a direct REST
+-- call can never set returned_at / condition_on_return — only the flag.
+-- Repeat taps are idempotent (coalesce keeps the first timestamp).
+create or replace function public.request_loan_return(p_loan_id uuid)
+returns timestamptz
+language plpgsql security definer set search_path = public as $$ ... $$;
+-- grants: EXECUTE revoked from public/anon, granted to authenticated.
+
+-- 0010 — ADMIN-only (is_admin() gate). Closes the loan as
+-- RETURNED + condition LOST, flags the copy LOST, and inserts a LOST fine at
+-- books.replacement_value_centavos (amount read in SQL, never from the client,
+-- R-14/R-29), then audits MARK_LOST. One LOST fine per loan is enforced by the
+-- existing uq_fine_per_loan partial index.
+create or replace function public.mark_loan_lost(p_loan_id uuid)
+returns uuid
+language plpgsql security definer set search_path = public as $$ ... $$;
+-- grants: EXECUTE revoked from public/anon, granted to authenticated.
+```
+
+**Semantics:** `return_requested_at` is *intent only* — the desk still confirms
+receipt through `record_return()` (condition + copy flip happen there).
+`mark_loan_lost()` is the accounting return for a book that never comes back;
+the `LOST` copy stays out of circulation until a REPLACEMENT payment settles
+the fine, at which point the admin server action flips it back to `AVAILABLE`.
+
+
 ---
 
 ## 8. Migration / Environment Checklist
 
 - [ ] Enable RLS on all 9 tables (§4)
 - [ ] Run DDL (§3) via Supabase SQL editor or a migration file
+- [ ] Apply migrations in order `0009_student_return_requests.sql` →
+      `0010_mark_lost.sql` (both are idempotent; §7.4)
 - [ ] Seed settings + first admin (§5)
 - [ ] Disable public sign-up in Auth settings (§6)
 - [ ] Create Storage buckets `book-covers`, `damage-photos` (private, admin-write)
