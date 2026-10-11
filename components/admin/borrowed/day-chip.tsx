@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { LoanStatus } from "@/lib/validations/loan";
+import type { LoanStatus } from "@/lib/validations/borrowed";
 
 /**
  * Due-date day chip for the admin loans table (design §2.1 semantic colors):
@@ -14,7 +14,7 @@ import type { LoanStatus } from "@/lib/validations/loan";
  * still late (R-20 finalized that number at return time, not today).
  *
  * Day figures come from `AdminLoanRow.days_remaining` / `days_late`
- * (Manila date-only math in lib/catalog/loans-read.ts) — this component only
+ * (Manila date-only math in lib/catalog/borrowed-read.ts) — this component only
  * renders what the read layer computed.
  */
 export interface DayChipProps {

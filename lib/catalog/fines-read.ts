@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { manilaToday } from "@/lib/catalog/loans-read";
+import { manilaToday } from "@/lib/catalog/borrowed-read";
 import { formatPeso } from "@/lib/utils";
 import {
   isDamageReportStatus,
@@ -21,7 +21,7 @@ import {
  * prd.md FR-17…FR-20 / US-4 / US-5 / US-7, schema.md §2.6/§2.7 + §7.3.
  *
  * Plain async functions: **no `"use server"` directive** (same contract as
- * lib/catalog/loans-read.ts / requests-read.ts) — call them from Server
+ * lib/catalog/borrowed-read.ts / requests-read.ts) — call them from Server
  * Components, route handlers or server actions, never from a client component.
  * Every read goes through the cookie-aware anon client so RLS applies
  * (schema.md §4):
@@ -195,7 +195,7 @@ function fail(message: string, details?: string): never {
   throw new Error(details ? `${message} (${details})` : message);
 }
 
-/** PostgREST 416/PGRST103 on a range past the last row (see loans-read). */
+/** PostgREST 416/PGRST103 on a range past the last row (see borrowed-read). */
 function isEmptyPageError(error: { code?: string } | null): boolean {
   return error?.code === "PGRST103";
 }
@@ -227,7 +227,7 @@ function toNumber(value: unknown, fallback = 0): number {
 
 /** `[startIso, endIso)` covering the current Manila month (R-30 boundaries:
  *  Manila 1st 00:00 == UTC 1st 00:00 − 8h). Same maths as `manilaMonthRange`
- *  in lib/catalog/loans-read.ts (kept private there). */
+ *  in lib/catalog/borrowed-read.ts (kept private there). */
 function manilaMonthRange(): { startIso: string; endIso: string } {
   const MANILA_OFFSET_MS = 8 * 3_600_000; // Asia/Manila = UTC+8, no DST
   const [year, month] = manilaToday().split("-").map(Number);
@@ -243,7 +243,7 @@ function manilaMonthRange(): { startIso: string; endIso: string } {
 }
 
 /** PostgREST `or=(…)` term over the given columns — same escaping rules as
- *  `ilikeOr` in lib/catalog/loans-read.ts: emitted double-quoted with the `%`
+ *  `ilikeOr` in lib/catalog/borrowed-read.ts: emitted double-quoted with the `%`
  *  wildcards inside so commas/parens/spaces stay literal and LIKE wildcards
  *  are escaped. */
 function ilikeOr(columns: string[], query: string): string {

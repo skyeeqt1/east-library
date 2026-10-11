@@ -4,17 +4,17 @@ import { connection } from "next/server";
 import { BookOpen } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
-import { LoanCard } from "@/components/student/loan-card";
-import { LoanStatusTabs } from "@/components/student/loan-status-tabs";
+import { BorrowedCard } from "@/components/student/borrowed-card";
+import { BorrowedStatusTabs } from "@/components/student/borrowed-status-tabs";
 import { StudentPagination } from "@/components/student/pagination";
 import {
-  STUDENT_LOANS_PER_PAGE,
-  STUDENT_LOANS_PATH,
-  buildStudentLoansPath,
-  parseStudentLoansQuery,
-  toStudentLoanStatus,
-} from "@/components/student/loans-query";
-import { getStudentLoans } from "@/lib/catalog/loans-read";
+  STUDENT_BORROWED_PER_PAGE,
+  STUDENT_BORROWED_PATH,
+  buildStudentBorrowedPath,
+  parseStudentBorrowedQuery,
+  toStudentBorrowedStatus,
+} from "@/components/student/borrowed-query";
+import { getStudentLoans } from "@/lib/catalog/borrowed-read";
 import { getCurrentProfile } from "@/lib/auth/guards";
 
 export const metadata: Metadata = { title: "My Borrowed Books" };
@@ -50,7 +50,7 @@ export default async function StudentLoansPage({
   // Block prerender validation before session/date work (Date.now() in supabase-js / formatRelativeTime).
   await connection();
 
-  const { status, page } = parseStudentLoansQuery(await searchParams);
+  const { status, page } = parseStudentBorrowedQuery(await searchParams);
 
   const me = await getCurrentProfile();
   if (!me) redirect("/login");
@@ -58,9 +58,9 @@ export default async function StudentLoansPage({
   let listing: Awaited<ReturnType<typeof getStudentLoans>> | null = null;
   try {
     listing = await getStudentLoans(me.id, {
-      status: toStudentLoanStatus(status),
+      status: toStudentBorrowedStatus(status),
       page,
-      perPage: STUDENT_LOANS_PER_PAGE,
+      perPage: STUDENT_BORROWED_PER_PAGE,
     });
   } catch {
     listing = null; // surface a readable error instead of an empty list
@@ -68,7 +68,7 @@ export default async function StudentLoansPage({
 
   const rows = listing?.rows ?? [];
   const total = listing?.total ?? 0;
-  const pageCount = Math.max(1, Math.ceil(total / STUDENT_LOANS_PER_PAGE));
+  const pageCount = Math.max(1, Math.ceil(total / STUDENT_BORROWED_PER_PAGE));
   const onCurrentPage = page > pageCount;
 
   const emptyCopy =
@@ -85,7 +85,7 @@ export default async function StudentLoansPage({
     >
       {/* escr-landing-page: auto-marker cascades all content blocks */}
       <div className="escr-landing-page flex flex-col gap-6">
-        <LoanStatusTabs status={status} />
+        <BorrowedStatusTabs status={status} />
 
         {listing === null ? (
           <div
@@ -121,7 +121,7 @@ export default async function StudentLoansPage({
               <Button
                 variant="secondary"
                 size="md"
-                href={buildStudentLoansPath({ status, page: 1 })}
+                href={buildStudentBorrowedPath({ status, page: 1 })}
                 className="mt-4"
               >
                 Back to first page
@@ -130,7 +130,7 @@ export default async function StudentLoansPage({
               <Button
                 variant="secondary"
                 size="md"
-                href={STUDENT_LOANS_PATH}
+                href={STUDENT_BORROWED_PATH}
                 className="mt-4"
               >
                 Show checked-out books
@@ -147,14 +147,14 @@ export default async function StudentLoansPage({
             <ul className="flex list-none flex-col gap-4 p-0">
               {rows.map((row) => (
                 <li key={row.id}>
-                  <LoanCard row={row} />
+                  <BorrowedCard row={row} />
                 </li>
               ))}
             </ul>
 
             {pageCount > 1 ? (
               <StudentPagination
-                basePath={STUDENT_LOANS_PATH}
+                basePath={STUDENT_BORROWED_PATH}
                 query={status === "open" ? {} : { status }}
                 page={page}
                 pageCount={pageCount}

@@ -124,7 +124,7 @@ export interface DashboardToolbarProps {
  *
  * Every interaction only writes the URL (`router.replace` via
  * `buildDashboardPath`), so the server component re-queries — same pattern
- * as `LoansSearch`. Search submit resets `page` to 1; status pills reset
+ * as `BorrowedSearch`. Search submit resets `page` to 1; status pills reset
  * `page` too but keep `tab` + `q`.
  *
  * ⌘K / Ctrl+K focuses the search field from anywhere on the page: the

@@ -3,13 +3,13 @@
 import { useCallback, useId, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CircleCheck, TriangleAlert } from "lucide-react";
-import { returnLoan } from "@/lib/admin/loan-actions";
+import { returnLoan } from "@/lib/admin/borrowed-actions";
 import {
   LOAN_CONDITIONS,
   LOAN_MESSAGES,
   type LoanCondition,
   type ReturnLoanResult,
-} from "@/lib/validations/loan";
+} from "@/lib/validations/borrowed";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Toast } from "@/components/ui/toast";

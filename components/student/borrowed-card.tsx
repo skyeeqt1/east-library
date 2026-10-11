@@ -7,9 +7,9 @@ import {
   withOwedAmount,
 } from "@/components/student/countdown-chip";
 import { ReturnBookButton } from "@/components/student/return-book-button";
-import type { StudentLoanRow } from "@/lib/catalog/loans-read";
+import type { StudentLoanRow } from "@/lib/catalog/borrowed-read";
 import { formatPeso } from "@/lib/utils";
-import type { LoanStatus } from "@/lib/validations/loan";
+import type { LoanStatus } from "@/lib/validations/borrowed";
 
 /**
  * Friendly badge text per `loans.status` (design §2.1 map lives in badge.tsx:
@@ -53,7 +53,7 @@ function initialsOf(title: string): string {
  * any fine notices sit in the same row or as compact strips below it — no
  * floating whitespace. Server component: plain row data, no client code.
  */
-export function LoanCard({ row }: { row: StudentLoanRow }) {
+export function BorrowedCard({ row }: { row: StudentLoanRow }) {
   const fine = row.fine;
   const countdown = withOwedAmount(countdownFor(row), fine);
   /** Overdue but the daily sweep (R-18) has not recorded a fine row yet. */

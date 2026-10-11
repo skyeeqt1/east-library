@@ -26,7 +26,7 @@ import {
  *   - `FINE_PATHS` / `revalidateFinePaths()` — the routes whose cached data a
  *     fine or damage write invalidates (admin queues + student dashboards);
  *   - `extractSqlErrorMessage()` — PostgREST error → exact `RAISE EXCEPTION`
- *     text (same behaviour as lib/admin/loan-actions.ts);
+ *     text (same behaviour as lib/admin/borrowed-actions.ts);
  *   - `writeFineAudit()` — best-effort `audit_logs` append through the
  *     **service-role client** (R-32: `audit_logs` has no client INSERT
  *     policy, schema.md §4);

@@ -6,13 +6,13 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs } from "@/components/ui/tabs";
 import {
-  buildLoansPath,
-  type LoansStatusFilter,
-} from "@/components/admin/loans/loans-query";
-import { LOAN_STATUSES } from "@/lib/validations/loan";
+  buildBorrowedPath,
+  type BorrowedStatusFilter,
+} from "@/components/admin/borrowed/borrowed-query";
+import { LOAN_STATUSES } from "@/lib/validations/borrowed";
 
 /** Friendly tab label per `LOAN_STATUSES` value — "ACTIVE" → "Active". */
-function tabLabel(status: LoansStatusFilter): string {
+function tabLabel(status: BorrowedStatusFilter): string {
   return status.charAt(0) + status.slice(1).toLowerCase();
 }
 
@@ -21,7 +21,7 @@ function tabLabel(status: LoansStatusFilter): string {
  * Active · Overdue · Returned. State lives in the URL — every switch resets
  * `page` (and keeps `q`) so the server component re-queries the matching tab.
  */
-export function LoansTabs({ status }: { status: LoansStatusFilter }) {
+export function BorrowedTabs({ status }: { status: BorrowedStatusFilter }) {
   const router = useRouter();
 
   return (
@@ -29,7 +29,7 @@ export function LoansTabs({ status }: { status: LoansStatusFilter }) {
       aria-label="Filter borrowed books by status"
       activeId={status}
       onChange={(id) => {
-        router.replace(buildLoansPath({ status: id as LoansStatusFilter, page: 1 }));
+        router.replace(buildBorrowedPath({ status: id as BorrowedStatusFilter, page: 1 }));
       }}
       tabs={LOAN_STATUSES.map((value) => ({
         id: value,
@@ -39,27 +39,27 @@ export function LoansTabs({ status }: { status: LoansStatusFilter }) {
   );
 }
 
-export interface LoansSearchProps {
+export interface BorrowedSearchProps {
   q: string;
-  status: LoansStatusFilter;
+  status: BorrowedStatusFilter;
 }
 
 /**
  * Free-text search over the loans table (design §4.4). The server read
  * resolves `q` against student name / number / course, title / author and
- * copy barcode (lib/catalog/loans-read.ts), so this form only owns the URL:
+ * copy barcode (lib/catalog/borrowed-read.ts), so this form only owns the URL:
  * submit → `router.replace` with `q` and a page reset.
  *
  * Uncontrolled + `key={q}` so back/forward and pill clicks refill the field
  * without an effect (same pattern as StudentsToolbar).
  */
-export function LoansSearch({ q, status }: LoansSearchProps) {
+export function BorrowedSearch({ q, status }: BorrowedSearchProps) {
   const router = useRouter();
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const value = String(new FormData(event.currentTarget).get("q") ?? "");
-    router.replace(buildLoansPath({ q: value.trim(), status, page: 1 }));
+    router.replace(buildBorrowedPath({ q: value.trim(), status, page: 1 }));
   };
 
   return (

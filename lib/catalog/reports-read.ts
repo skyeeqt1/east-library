@@ -6,7 +6,7 @@ import {
   getLoanCounts,
   manilaToday,
   toManilaDate,
-} from "@/lib/catalog/loans-read";
+} from "@/lib/catalog/borrowed-read";
 import {
   FINE_STATUSES,
   FINE_TYPES,
@@ -32,7 +32,7 @@ import {
  *                                 category + fines matrix + top unpaid balances.
  *
  * Plain async functions: **no `"use server"` directive** (the same contract as
- * lib/catalog/loans-read.ts / fines-read.ts / activity-read.ts) — call them
+ * lib/catalog/borrowed-read.ts / fines-read.ts / activity-read.ts) — call them
  * from Server Components / route handlers, never from a client component.
  * Every read goes through the cookie-aware anon client so RLS applies
  * (schema.md §4): an admin session sees the whole school, a student session
@@ -220,7 +220,7 @@ export interface CollectionsReport {
 }
 
 /* ------------------------------------------------------------------ */
-/* Manila day maths (R-30 — same conventions as loans-read/activity-read) */
+/* Manila day maths (R-30 — same conventions as borrowed-read/activity-read) */
 /* ------------------------------------------------------------------ */
 
 /** `YYYY-MM-DD` + `n` days (pure date-string maths — no timezone involved). */

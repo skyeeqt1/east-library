@@ -4,7 +4,7 @@ import {
   getCollectionsReport,
 } from "@/lib/catalog/reports-read";
 import { getLibrarySettings } from "@/lib/catalog/settings-read";
-import { manilaToday, toManilaDate } from "@/lib/catalog/loans-read";
+import { manilaToday, toManilaDate } from "@/lib/catalog/borrowed-read";
 import { formatPeso } from "@/lib/utils";
 
 /**

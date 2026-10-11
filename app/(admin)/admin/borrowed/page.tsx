@@ -15,24 +15,24 @@ import {
   TableHead,
   Tr,
 } from "@/components/ui/table";
-import { DayChip } from "@/components/admin/loans/day-chip";
-import { LoansPagination } from "@/components/admin/loans/loans-pagination";
-import { LoansSearch, LoansTabs } from "@/components/admin/loans/loans-toolbar";
+import { DayChip } from "@/components/admin/borrowed/day-chip";
+import { BorrowedPagination } from "@/components/admin/borrowed/borrowed-pagination";
+import { BorrowedSearch, BorrowedTabs } from "@/components/admin/borrowed/borrowed-toolbar";
 import {
-  LOANS_PER_PAGE,
-  parseLoansQuery,
-} from "@/components/admin/loans/loans-query";
-import { ReturnButton } from "@/components/admin/loans/return-button";
-import { MarkLostButton } from "@/components/admin/loans/mark-lost-button";
+  BORROWED_PER_PAGE,
+  parseBorrowedQuery,
+} from "@/components/admin/borrowed/borrowed-query";
+import { ReturnButton } from "@/components/admin/borrowed/return-button";
+import { MarkLostButton } from "@/components/admin/borrowed/mark-lost-button";
 import {
   getAdminActiveLoans,
   getLoanCounts,
   type AdminLoansPage,
   type LoanCounts,
-} from "@/lib/catalog/loans-read";
+} from "@/lib/catalog/borrowed-read";
 import { getCurrentProfile } from "@/lib/auth/guards";
 import { formatRelativeTime } from "@/lib/utils";
-import type { LoanStatus } from "@/lib/validations/loan";
+import type { LoanStatus } from "@/lib/validations/borrowed";
 
 export const metadata: Metadata = { title: "Borrowed Books" };
 
@@ -85,7 +85,7 @@ function RelativeTime({ iso }: { iso: string }) {
  * the session guard shared by every admin page. Stats come from
  * `getLoanCounts()`; rows from `getAdminActiveLoans()` — both through the
  * cookie-aware anon client so RLS applies (schema.md §4). Mutations live in
- * `lib/admin/loan-actions.ts` (`returnLoan`), triggered by the row-level
+ * `lib/admin/borrowed-actions.ts` (`returnLoan`), triggered by the row-level
  * "Mark returned" button.
  *
  * Page rhythm follows design §5: header → tabs → stat cards → toolbar →
@@ -99,7 +99,7 @@ export default async function AdminLoansPage({
   // Block prerender validation before session/date work (Date.now() in supabase-js / formatRelativeTime).
   await connection();
 
-  const { status, q, page } = parseLoansQuery(await searchParams);
+  const { status, q, page } = parseBorrowedQuery(await searchParams);
 
   // The profile read and the data reads don't depend on each other, so they
   // overlap in one wave; the session gate below still fires before rendering.
@@ -113,7 +113,7 @@ export default async function AdminLoansPage({
             status,
             q: q || undefined,
             page,
-            perPage: LOANS_PER_PAGE,
+            perPage: BORROWED_PER_PAGE,
           }),
         ]);
         return { counts, loans };
@@ -126,7 +126,7 @@ export default async function AdminLoansPage({
 
   const rows = data?.loans.rows ?? [];
   const total = data?.loans.total ?? 0;
-  const pageCount = Math.max(1, Math.ceil(total / LOANS_PER_PAGE));
+  const pageCount = Math.max(1, Math.ceil(total / BORROWED_PER_PAGE));
   const onCurrentPage = page > pageCount;
   const filtering = q.length > 0;
 
@@ -179,7 +179,7 @@ export default async function AdminLoansPage({
         ) : (
           <>
             {/* Tab row from LOAN_STATUSES (design §4.3 / §5 rhythm) */}
-            <LoansTabs status={status} />
+            <BorrowedTabs status={status} />
 
             {/* Five live counters (design §4.2 grid: 1 → 2 → 5) */}
             <section
@@ -209,7 +209,7 @@ export default async function AdminLoansPage({
             </section>
 
             {/* Free-text search — the read resolves student/book/barcode (§4.4) */}
-            <LoansSearch q={q} status={status} />
+            <BorrowedSearch q={q} status={status} />
 
             {rows.length === 0 ? (
               <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-12 text-center">
@@ -229,7 +229,7 @@ export default async function AdminLoansPage({
                   <Button
                     variant="secondary"
                     size="md"
-                    href="/admin/loans"
+                    href="/admin/borrowed"
                     className="mt-4"
                   >
                     {onCurrentPage ? "Back to first page" : "Clear search"}
@@ -240,7 +240,7 @@ export default async function AdminLoansPage({
               <Table
                 minWidth={1180}
                 footer={
-                  <LoansPagination
+                  <BorrowedPagination
                     page={page}
                     pageCount={pageCount}
                     status={status}

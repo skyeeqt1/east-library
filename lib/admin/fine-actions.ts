@@ -19,7 +19,7 @@ import { revalidateFinePaths, settleFinePayment } from "@/lib/admin/fine-shared"
  *  Admin fine actions — record payment / waive (Phase 5, rules.md §5–§7)
  * ============================================================================
  *
- * Every action follows lib/admin/loan-actions.ts + request-actions.ts:
+ * Every action follows lib/admin/borrowed-actions.ts + request-actions.ts:
  *   1. `assertAdmin()` FIRST (session → profiles.role → redirect when not
  *      ADMIN; §9 matrix: "Settle / waive fines" is ADMIN-only, R-31/E10),
  *   2. re-validates input with Zod (client values are never trusted, R-31 —

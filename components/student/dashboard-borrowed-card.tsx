@@ -7,7 +7,7 @@ import {
   withOwedAmount,
 } from "@/components/student/countdown-chip";
 import { ReturnBookButton } from "@/components/student/return-book-button";
-import type { StudentLoanRow } from "@/lib/catalog/loans-read";
+import type { StudentLoanRow } from "@/lib/catalog/borrowed-read";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en-PH", {
   dateStyle: "medium",
@@ -39,7 +39,7 @@ function initialsOf(title: string): string {
  * orange 1–3d · red due-today/overdue with the live ₱ owed when a fine is
  * already recorded). Server component — plain row data, no client code.
  */
-export function DashboardLoanCard({ row }: { row: StudentLoanRow }) {
+export function DashboardBorrowedCard({ row }: { row: StudentLoanRow }) {
   const countdown = withOwedAmount(countdownFor(row), row.fine);
 
   return (
@@ -72,7 +72,7 @@ export function DashboardLoanCard({ row }: { row: StudentLoanRow }) {
           ) : (
             <ReturnBookButton loanId={row.id} title={row.title} />
           )}
-          <Button size="sm" variant="secondary" href="/dashboard/loans">
+          <Button size="sm" variant="secondary" href="/dashboard/borrowed">
             View details
           </Button>
         </div>

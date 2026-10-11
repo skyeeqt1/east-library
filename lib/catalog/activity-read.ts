@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { getCatalogStats } from "@/lib/catalog/availability";
-import { getLoanCounts, manilaToday } from "@/lib/catalog/loans-read";
+import { getLoanCounts, manilaToday } from "@/lib/catalog/borrowed-read";
 
 /**
  * ============================================================================
@@ -18,7 +18,7 @@ import { getLoanCounts, manilaToday } from "@/lib/catalog/loans-read";
  *                                   deltas, 14-day Manila trend series).
  *
  * Plain async functions: **no `"use server"` directive** (same contract as
- * lib/catalog/loans-read.ts / fines-read.ts / availability.ts) — call them
+ * lib/catalog/borrowed-read.ts / fines-read.ts / availability.ts) — call them
  * from Server Components / route handlers / server actions, never from a
  * client component. Every read goes through the cookie-aware anon client so
  * RLS applies (schema.md §4): `loan_requests` / `loans` / `fines` /
@@ -297,7 +297,7 @@ function mapLoanRow(
     event: { label: `${eventPrefix} ${dateLabel(eventAt)}`, at: eventAt },
     dueDate: row.due_date,
     status,
-    href: "/admin/loans",
+    href: "/admin/borrowed",
   };
 }
 

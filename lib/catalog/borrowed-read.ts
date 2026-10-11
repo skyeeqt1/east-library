@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { isLoanStatus, type LoanStatus } from "@/lib/validations/loan";
+import { isLoanStatus, type LoanStatus } from "@/lib/validations/borrowed";
 
 /**
  * ============================================================================

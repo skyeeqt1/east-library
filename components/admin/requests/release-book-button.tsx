@@ -3,12 +3,12 @@
 import { useCallback, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
-import { releaseLoan } from "@/lib/admin/loan-actions";
+import { releaseLoan } from "@/lib/admin/borrowed-actions";
 import { fetchReleaseCandidates } from "@/components/admin/requests/candidates-action";
 import {
   LOAN_MESSAGES,
   type ReleaseCandidates,
-} from "@/lib/validations/loan";
+} from "@/lib/validations/borrowed";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";

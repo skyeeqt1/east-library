@@ -151,7 +151,7 @@ export interface ReleaseCandidates {
 /* ------------------------------------------------------------------ */
 
 /**
- * Exact error strings surfaced by lib/admin/loan-actions.ts. Kept here so the
+ * Exact error strings surfaced by lib/admin/borrowed-actions.ts. Kept here so the
  * UI task can reference them without importing a "use server" module.
  */
 export const LOAN_MESSAGES = {

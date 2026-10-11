@@ -24,10 +24,10 @@ import { getCurrentProfile } from "@/lib/auth/guards";
  */
 
 /** Routes whose cached data depends on loan writes. */
-const LOAN_PATHS = [
+const BORROWED_PATHS = [
   "/dashboard",
-  "/dashboard/loans",
-  "/admin/loans",
+  "/dashboard/borrowed",
+  "/admin/borrowed",
 ] as const;
 
 const UUID_PATTERN =
@@ -97,6 +97,6 @@ export async function requestLoanReturn(
 
   await writeAudit(profile.id, loanId, { return_requested_at: data ?? null });
 
-  for (const path of LOAN_PATHS) revalidatePath(path);
+  for (const path of BORROWED_PATHS) revalidatePath(path);
   return { ok: true };
 }

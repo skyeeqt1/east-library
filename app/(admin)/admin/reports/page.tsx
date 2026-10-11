@@ -32,7 +32,7 @@ import {
   type CirculationReport,
   type CollectionsReport,
 } from "@/lib/catalog/reports-read";
-import { manilaToday } from "@/lib/catalog/loans-read";
+import { manilaToday } from "@/lib/catalog/borrowed-read";
 import { getCurrentProfile } from "@/lib/auth/guards";
 import { formatPeso, formatRelativeTime } from "@/lib/utils";
 import type { FineType } from "@/lib/validations/fine";

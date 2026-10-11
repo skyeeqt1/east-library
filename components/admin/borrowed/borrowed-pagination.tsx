@@ -3,15 +3,15 @@
 import { useRouter } from "next/navigation";
 import { TableFooter } from "@/components/ui/table-footer";
 import {
-  LOANS_PER_PAGE,
-  buildLoansPath,
-  type LoansStatusFilter,
-} from "@/components/admin/loans/loans-query";
+  BORROWED_PER_PAGE,
+  buildBorrowedPath,
+  type BorrowedStatusFilter,
+} from "@/components/admin/borrowed/borrowed-query";
 
-export interface LoansPaginationProps {
+export interface BorrowedPaginationProps {
   page: number;
   pageCount: number;
-  status: LoansStatusFilter;
+  status: BorrowedStatusFilter;
   q: string;
 }
 
@@ -21,21 +21,21 @@ export interface LoansPaginationProps {
  * the next range (25/page). Rows-per-page stays fixed at 25, so the select is
  * rendered disabled (no `onPerPageChange`).
  */
-export function LoansPagination({
+export function BorrowedPagination({
   page,
   pageCount,
   status,
   q,
-}: LoansPaginationProps) {
+}: BorrowedPaginationProps) {
   const router = useRouter();
 
   return (
     <TableFooter
       page={page}
       pageCount={pageCount}
-      perPage={LOANS_PER_PAGE}
+      perPage={BORROWED_PER_PAGE}
       onPageChange={(next) => {
-        router.replace(buildLoansPath({ status, q, page: next }));
+        router.replace(buildBorrowedPath({ status, q, page: next }));
       }}
     />
   );

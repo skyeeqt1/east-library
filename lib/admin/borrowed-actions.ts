@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { assertAdmin } from "@/lib/auth/guards";
 import { fieldErrorsFromZod } from "@/lib/validations/auth";
-import { daysSince } from "@/lib/catalog/loans-read";
+import { daysSince } from "@/lib/catalog/borrowed-read";
 import {
   LOAN_MESSAGES,
   markLostSchema,
@@ -15,7 +15,7 @@ import {
   type ReleaseCandidates,
   type ReleaseLoanResult,
   type ReturnLoanResult,
-} from "@/lib/validations/loan";
+} from "@/lib/validations/borrowed";
 import type { RequestStatus } from "@/lib/validations/request";
 
 /**
@@ -50,17 +50,17 @@ import type { RequestStatus } from "@/lib/validations/request";
  */
 
 /** Routes whose cached data depends on loan writes (admin + student, §9). */
-const LOAN_PATHS = [
+const BORROWED_PATHS = [
   "/admin/requests",
-  "/admin/loans",
+  "/admin/borrowed",
   "/admin/penalties",
-  "/dashboard/loans",
+  "/dashboard/borrowed",
   "/dashboard/penalties",
   "/dashboard",
 ] as const;
 
 function revalidateLoanPaths(): void {
-  for (const path of LOAN_PATHS) revalidatePath(path);
+  for (const path of BORROWED_PATHS) revalidatePath(path);
 }
 
 /**

@@ -24,7 +24,7 @@ export interface DashboardPaginationProps {
  * `page` param — keeping `tab`, `status` and `q` — so the server component
  * re-queries the next slice of the merged activity feed (10/page).
  * Rows-per-page stays fixed at 10, so the select is rendered disabled
- * (no `onPerPageChange`) — same contract as `LoansPagination`.
+ * (no `onPerPageChange`) — same contract as `BorrowedPagination`.
  */
 export function DashboardPagination({
   page,

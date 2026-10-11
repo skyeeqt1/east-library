@@ -14,7 +14,7 @@ import { Badge, toneForStatus } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
-import { DashboardLoanCard } from "@/components/student/dashboard-loan-card";
+import { DashboardBorrowedCard } from "@/components/student/dashboard-borrowed-card";
 import {
   CountdownChip,
   countdownFor,
@@ -23,7 +23,7 @@ import {
 import {
   getStudentLoans,
   type StudentLoanRow,
-} from "@/lib/catalog/loans-read";
+} from "@/lib/catalog/borrowed-read";
 import { getBlockingNotices } from "@/lib/catalog/fines-read";
 import { getCurrentProfile } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
@@ -380,7 +380,7 @@ export default async function StudentDashboardPage() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    href="/dashboard/loans"
+                    href="/dashboard/borrowed"
                   >
                     View all
                     <ArrowRight className="size-4" aria-hidden="true" />
@@ -411,7 +411,7 @@ export default async function StudentDashboardPage() {
                 <ul className="flex list-none flex-col gap-4 p-0">
                   {data.openLoans.slice(0, 5).map((row) => (
                     <li key={row.id}>
-                      <DashboardLoanCard row={row} />
+                      <DashboardBorrowedCard row={row} />
                     </li>
                   ))}
                 </ul>

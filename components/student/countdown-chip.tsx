@@ -14,7 +14,7 @@ import { cn, formatPeso } from "@/lib/utils";
  * never the only signal (design §7 / WCAG 1.4.1).
  *
  * Day figures come from the Manila date-only maths in
- * lib/catalog/loans-read.ts (`days_remaining` / `days_late`); this module
+ * lib/catalog/borrowed-read.ts (`days_remaining` / `days_late`); this module
  * only renders what the read layer computed. RETURNED rows get no chip — the
  * status pill already carries the outcome (R-20 finalised the day count).
  */

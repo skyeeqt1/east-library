@@ -33,8 +33,8 @@ function formatDate(value: string | null | undefined): string {
 /** Fallback queues when a row arrives without an explicit `href`. */
 const KIND_HREF: Record<ActivityRow["kind"], string> = {
   REQUEST: "/admin/requests",
-  LOAN: "/admin/loans",
-  RETURN: "/admin/loans",
+  LOAN: "/admin/borrowed",
+  RETURN: "/admin/borrowed",
   FINE: "/admin/penalties",
 };
 

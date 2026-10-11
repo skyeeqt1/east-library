@@ -5,7 +5,7 @@ import type { FineStatus } from "@/lib/validations/fine";
  *
  * Shared by the server page (reading `searchParams`) and the client tab pills
  * (writing the URL), so both sides agree on the contract — the mirror of
- * `components/student/loans-query.ts`.
+ * `components/student/borrowed-query.ts`.
  *
  * Tab filter → read-helper mapping (lib/catalog/fines-read.ts):
  *   `unpaid`  → `getStudentFines(studentId, { status: 'UNPAID' })` — the

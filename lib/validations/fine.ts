@@ -22,7 +22,7 @@ import { z } from "zod";
  *
  * The server actions in lib/admin/fine-actions.ts and lib/admin/damage-actions.ts
  * parse `unknown` with these schemas before touching the database (R-31),
- * mirroring lib/validations/loan.ts / request.ts.
+ * mirroring lib/validations/borrowed.ts / request.ts.
  *
  * Money never appears in a write schema: amounts are computed exclusively in
  * SQL (R-18/R-22/R-31) and always carried as integer centavos (R-29) — the UI
@@ -160,7 +160,7 @@ export function isDamageReportStatus(value: string): value is DamageReportStatus
 
 /**
  * Result shape returned by every Phase 5 server action — the same union
- * pattern as `LoanActionResult` (lib/validations/loan.ts):
+ * pattern as `LoanActionResult` (lib/validations/borrowed.ts):
  *   success → `{ ok: true, data }`
  *   failure → `{ ok: false, error?, fieldErrors? }`
  */

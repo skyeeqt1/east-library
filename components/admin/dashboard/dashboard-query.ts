@@ -6,7 +6,7 @@ import type { ActivityStatus, ActivityTab } from "@/lib/catalog/activity-types";
  * Shared by the server page (reading `searchParams`) and the client tabs /
  * search form / status pills / pagination (writing the URL), so both sides
  * always agree on the contract — the mirror of
- * `components/admin/loans/loans-query.ts`.
+ * `components/admin/borrowed/borrowed-query.ts`.
  *
  *   `/admin/dashboard?tab=all&status=unpaid&q=maria&page=2`
  *
